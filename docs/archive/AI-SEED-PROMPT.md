@@ -1,4 +1,14 @@
-Implement the “RCV Lunch Picker” app described in PLAN.md.
+> **ARCHIVED**: This file was the original seed prompt used to bootstrap the MVP implementation (Phases 1-3).
+> It has been moved to `docs/archive/` as it served its purpose and ongoing development practices
+> are now documented in `CLAUDE.md` at the repository root.
+>
+> Archived: 2026-01-24
+
+---
+
+# Original AI Seed Prompt
+
+Implement the "RCV Lunch Picker" app described in PLAN.md.
 
 Hard rules (must follow)
 - Make changes additive and isolated. Do NOT overwrite existing deployment paths, nginx sites, or scripts used by other apps in this repo.

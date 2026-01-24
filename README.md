@@ -131,6 +131,29 @@ See [deploy/README.md](deploy/README.md) for detailed deployment instructions.
 
 ---
 
+## CI/CD Pipeline
+
+This project includes a GitLab CI/CD pipeline (`.gitlab-ci.yml`) that automates:
+
+| Stage | Purpose |
+|-------|---------|
+| `validate` | ESLint + TypeScript type checking |
+| `test` | Jest unit tests with coverage |
+| `build` | Next.js production build |
+| `deploy` | SSH-based deployment (manual trigger) |
+
+### Enabling Deployment
+
+Deployment requires configuring CI/CD variables in GitLab:
+- `DEPLOY_HOST` - Server hostname
+- `DEPLOY_USER` - SSH username
+- `DEPLOY_SSH_KEY` - SSH private key (file type)
+- `DEPLOY_PATH` - Application directory on server
+
+See `.gitlab-ci.yml` comments for detailed setup instructions.
+
+---
+
 ## Architecture
 
 - **Framework:** Next.js 14 (App Router)
@@ -162,7 +185,9 @@ deploy/
 └── README.md                 # Deployment instructions
 
 docs/
-└── refactor-opportunities.md # Future improvement ideas
+├── refactor-opportunities.md # Future improvement ideas
+├── CHANGELOG.md              # Work history
+└── archive/                  # Archived documentation
 ```
 
 ---
@@ -196,17 +221,20 @@ If something isn't in `PLAN.md`, it should be questioned before implementation.
 
 ---
 
-### 🤖 `AI-SEED-PROMPT.md` — AI / Codex Execution Instructions
+### 🤖 `CLAUDE.md` — AI Agent Development Guidelines
 **This document tells AI agents how to work in this repo safely.**
 
 It includes:
 - Hard constraints (additive changes only, no overwrites)
 - Deployment isolation rules
-- Technical assumptions
-- What to build and what *not* to build
-- PR expectations
+- Technical assumptions and commands
+- RCV rules reference
+- Project structure overview
+- What *not* to do
 
-If you are using Codex or another AI coding agent, start there.
+If you are using Claude Code or another AI coding agent, start there.
+
+> **Note:** The original `AI-SEED-PROMPT.md` (used to bootstrap the MVP) has been archived to `docs/archive/`.
 
 ---
 
