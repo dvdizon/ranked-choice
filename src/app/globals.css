@@ -1,0 +1,266 @@
+:root {
+  --bg: #fafafa;
+  --fg: #111;
+  --accent: #0070f3;
+  --accent-hover: #0051cc;
+  --border: #ddd;
+  --error: #dc3545;
+  --success: #28a745;
+  --muted: #666;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.header {
+  padding: 1rem 0;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+input[type="text"],
+input[type="password"],
+textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+button {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--accent-hover);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #6c757d;
+}
+
+.btn-secondary:hover {
+  background: #545b62;
+}
+
+.error {
+  color: var(--error);
+  font-size: 0.875rem;
+}
+
+.success {
+  color: var(--success);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.option-list {
+  list-style: none;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  cursor: grab;
+}
+
+.option-item:active {
+  cursor: grabbing;
+}
+
+.option-item.dragging {
+  opacity: 0.5;
+}
+
+.option-rank {
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 1.5rem;
+}
+
+.option-name {
+  flex: 1;
+}
+
+.option-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.option-buttons button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.secret-display {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.secret-value {
+  font-family: monospace;
+  font-size: 1.25rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.round-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.round-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.round-tallies {
+  margin-bottom: 0.5rem;
+}
+
+.tally-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.tally-name {
+  min-width: 100px;
+}
+
+.tally-bar-fill {
+  height: 20px;
+  background: var(--accent);
+  border-radius: 2px;
+  min-width: 2px;
+}
+
+.tally-count {
+  font-weight: 500;
+}
+
+.eliminated {
+  color: var(--error);
+  font-size: 0.875rem;
+}
+
+.winner-badge {
+  display: inline-block;
+  background: var(--success);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.winner-card {
+  background: #d4edda;
+  border-color: var(--success);
+  text-align: center;
+  padding: 2rem;
+}
+
+.winner-name {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.tie-card {
+  background: #fff3cd;
+  border-color: #ffc107;
+  text-align: center;
+  padding: 2rem;
+}
+
+.hidden {
+  display: none;
+}
