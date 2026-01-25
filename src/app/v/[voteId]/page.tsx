@@ -1,13 +1,110 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter, redirect } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Vote {
   id: string
   title: string
   options: string[]
   ballotCount: number
+}
+
+interface SortableItemProps {
+  id: string
+  index: number
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
+  onRemove: (option: string) => void
+  isFirst: boolean
+  isLast: boolean
+}
+
+function SortableItem({ id, index, onMoveUp, onMoveDown, onRemove, isFirst, isLast }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`option-item ${isDragging ? 'dragging' : ''}`}
+      {...attributes}
+      {...listeners}
+    >
+      <span className="option-rank">{index + 1}</span>
+      <span className="option-name">{id}</span>
+      <div className="option-buttons" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onMoveUp(index); }}
+          disabled={isFirst}
+          title="Move up"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onMoveDown(index); }}
+          disabled={isLast}
+          title="Move down"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(id); }}
+          className="btn-secondary"
+          title="Remove"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          ×
+        </button>
+      </div>
+    </li>
+  )
+}
+
+function DragOverlayItem({ option, index }: { option: string; index: number }) {
+  return (
+    <li className="option-item dragging-overlay">
+      <span className="option-rank">{index + 1}</span>
+      <span className="option-name">{option}</span>
+    </li>
+  )
 }
 
 export default function VotePage() {
@@ -23,7 +120,25 @@ export default function VotePage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [draggedItem, setDraggedItem] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Configure sensors for touch and pointer support
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   // Redirect to lowercase if needed
   useEffect(() => {
@@ -86,46 +201,23 @@ export default function VotePage() {
   }
 
   // Drag and drop handlers
-  const handleDragStart = (option: string) => {
-    setDraggedItem(option)
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveId(null)
 
-  const handleDropOnRanked = (targetIndex: number) => {
-    if (!draggedItem) return
+    if (!over) return
 
-    const fromRankedIndex = rankings.indexOf(draggedItem)
-    const fromUnranked = unranked.includes(draggedItem)
-
-    if (fromRankedIndex !== -1) {
-      // Reordering within rankings
-      const newRankings = [...rankings]
-      newRankings.splice(fromRankedIndex, 1)
-      newRankings.splice(targetIndex, 0, draggedItem)
-      setRankings(newRankings)
-    } else if (fromUnranked) {
-      // Moving from unranked to rankings
-      setUnranked(unranked.filter((o) => o !== draggedItem))
-      const newRankings = [...rankings]
-      newRankings.splice(targetIndex, 0, draggedItem)
-      setRankings(newRankings)
+    if (active.id !== over.id) {
+      setRankings((items) => {
+        const oldIndex = items.indexOf(active.id as string)
+        const newIndex = items.indexOf(over.id as string)
+        return arrayMove(items, oldIndex, newIndex)
+      })
     }
-
-    setDraggedItem(null)
-  }
-
-  const handleDropOnUnranked = () => {
-    if (!draggedItem) return
-
-    if (rankings.includes(draggedItem)) {
-      setRankings(rankings.filter((o) => o !== draggedItem))
-      setUnranked([...unranked, draggedItem])
-    }
-
-    setDraggedItem(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,12 +263,21 @@ export default function VotePage() {
   }
 
   if (loading) {
-    return <p>Loading...</p>
+    return (
+      <div className="loading-container">
+        <div className="loading-skeleton">
+          <div className="skeleton-title"></div>
+          <div className="skeleton-text"></div>
+          <div className="skeleton-card"></div>
+          <div className="skeleton-card"></div>
+        </div>
+      </div>
+    )
   }
 
   if (error && !vote) {
     return (
-      <div>
+      <div className="fade-in">
         <h1>Error</h1>
         <p className="error">{error}</p>
         <button onClick={() => router.push('/')}>Create a New Vote</button>
@@ -190,7 +291,7 @@ export default function VotePage() {
 
   if (success) {
     return (
-      <div>
+      <div className="fade-in">
         <h1>Ballot Submitted!</h1>
         <div className="card">
           <p className="success">Your vote has been recorded.</p>
@@ -221,8 +322,10 @@ export default function VotePage() {
     )
   }
 
+  const activeIndex = activeId ? rankings.indexOf(activeId) : -1
+
   return (
-    <div>
+    <div className="fade-in">
       <h1>{vote.title}</h1>
       <p className="muted" style={{ marginBottom: '1.5rem' }}>
         {vote.ballotCount} ballot{vote.ballotCount !== 1 ? 's' : ''} submitted
@@ -232,66 +335,48 @@ export default function VotePage() {
         <div style={{ marginBottom: '1.5rem' }}>
           <h2>Your Rankings</h2>
           <p className="muted" style={{ marginBottom: '0.5rem' }}>
-            Drag options here or click + to add. Your top choice should be #1.
+            Drag options to reorder or click + to add. Your top choice should be #1.
           </p>
 
-          <div
-            className="card"
-            onDragOver={handleDragOver}
-            onDrop={() => handleDropOnRanked(rankings.length)}
-            style={{ minHeight: '100px' }}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           >
-            {rankings.length === 0 ? (
-              <p className="muted" style={{ textAlign: 'center', padding: '1rem' }}>
-                Click options below to rank them
-              </p>
-            ) : (
-              <ul className="option-list">
-                {rankings.map((option, index) => (
-                  <li
-                    key={option}
-                    className={`option-item ${draggedItem === option ? 'dragging' : ''}`}
-                    draggable
-                    onDragStart={() => handleDragStart(option)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => {
-                      e.stopPropagation()
-                      handleDropOnRanked(index)
-                    }}
-                  >
-                    <span className="option-rank">{index + 1}</span>
-                    <span className="option-name">{option}</span>
-                    <div className="option-buttons">
-                      <button
-                        type="button"
-                        onClick={() => moveUp(index)}
-                        disabled={index === 0}
-                        title="Move up"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveDown(index)}
-                        disabled={index === rankings.length - 1}
-                        title="Move down"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeFromRankings(option)}
-                        className="btn-secondary"
-                        title="Remove"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+            <div className="card" style={{ minHeight: '100px' }}>
+              {rankings.length === 0 ? (
+                <p className="muted" style={{ textAlign: 'center', padding: '1rem' }}>
+                  Click options below to rank them
+                </p>
+              ) : (
+                <SortableContext
+                  items={rankings}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <ul className="option-list">
+                    {rankings.map((option, index) => (
+                      <SortableItem
+                        key={option}
+                        id={option}
+                        index={index}
+                        onMoveUp={moveUp}
+                        onMoveDown={moveDown}
+                        onRemove={removeFromRankings}
+                        isFirst={index === 0}
+                        isLast={index === rankings.length - 1}
+                      />
+                    ))}
+                  </ul>
+                </SortableContext>
+              )}
+            </div>
+            <DragOverlay>
+              {activeId ? (
+                <DragOverlayItem option={activeId} index={activeIndex} />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </div>
 
         {unranked.length > 0 && (
@@ -301,20 +386,13 @@ export default function VotePage() {
               Click to add to your rankings. Partial ranking is allowed.
             </p>
 
-            <div
-              className="card"
-              onDragOver={handleDragOver}
-              onDrop={handleDropOnUnranked}
-            >
+            <div className="card">
               <ul className="option-list">
                 {unranked.map((option) => (
                   <li
                     key={option}
-                    className={`option-item ${draggedItem === option ? 'dragging' : ''}`}
-                    draggable
-                    onDragStart={() => handleDragStart(option)}
+                    className="option-item clickable"
                     onClick={() => addToRankings(option)}
-                    style={{ cursor: 'pointer' }}
                   >
                     <span className="option-name">{option}</span>
                     <button type="button" title="Add to rankings">
