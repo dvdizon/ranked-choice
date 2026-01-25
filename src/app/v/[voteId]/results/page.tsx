@@ -92,12 +92,22 @@ export default function ResultsPage() {
   }
 
   if (loading && !data) {
-    return <p>Loading...</p>
+    return (
+      <div className="loading-container">
+        <div className="loading-skeleton">
+          <div className="skeleton-title"></div>
+          <div className="skeleton-text"></div>
+          <div className="skeleton-card" style={{ height: '150px' }}></div>
+          <div className="skeleton-card"></div>
+          <div className="skeleton-card"></div>
+        </div>
+      </div>
+    )
   }
 
   if (error && !data) {
     return (
-      <div>
+      <div className="fade-in">
         <h1>Error</h1>
         <p className="error">{error}</p>
         <button onClick={() => router.push('/')}>Create a New Vote</button>
@@ -116,7 +126,7 @@ export default function ResultsPage() {
   )
 
   return (
-    <div>
+    <div className="fade-in">
       <h1>{vote.title}</h1>
       <p className="muted" style={{ marginBottom: '1.5rem' }}>
         Results • {results.totalBallots} ballot{results.totalBallots !== 1 ? 's' : ''} cast

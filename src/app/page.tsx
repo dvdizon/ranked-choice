@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import CopyButton from './components/CopyButton'
 
 interface CreateVoteResponse {
   success: boolean
@@ -71,9 +72,19 @@ export default function CreateVotePage() {
     }
   }
 
+  const getFullUrl = (path: string) => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}${path}`
+    }
+    return path
+  }
+
   if (createdVote) {
+    const voteFullUrl = getFullUrl(createdVote.voteUrl)
+    const resultsFullUrl = getFullUrl(createdVote.resultsUrl)
+
     return (
-      <div>
+      <div className="fade-in">
         <h1>Vote Created!</h1>
 
         <div className="card">
@@ -83,7 +94,10 @@ export default function CreateVotePage() {
 
         <div className="secret-display">
           <p><strong>Write Secret (save this!):</strong></p>
-          <p className="secret-value">{createdVote.writeSecret}</p>
+          <div className="copyable-field">
+            <span className="secret-value">{createdVote.writeSecret}</span>
+            <CopyButton text={createdVote.writeSecret} label="Copy secret" />
+          </div>
           <p className="muted" style={{ marginTop: '0.5rem' }}>
             Share this secret with voters so they can submit ballots.
             This will only be shown once.
@@ -92,14 +106,20 @@ export default function CreateVotePage() {
 
         <div className="card">
           <h2>Links</h2>
-          <p style={{ marginBottom: '0.5rem' }}>
-            <strong>Vote page:</strong>{' '}
-            <a href={createdVote.voteUrl}>{window.location.origin}{createdVote.voteUrl}</a>
-          </p>
-          <p>
-            <strong>Results page:</strong>{' '}
-            <a href={createdVote.resultsUrl}>{window.location.origin}{createdVote.resultsUrl}</a>
-          </p>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <p><strong>Vote page:</strong></p>
+            <div className="copyable-field">
+              <a href={createdVote.voteUrl} className="link-text">{voteFullUrl}</a>
+              <CopyButton text={voteFullUrl} label="Copy vote URL" />
+            </div>
+          </div>
+          <div>
+            <p><strong>Results page:</strong></p>
+            <div className="copyable-field">
+              <a href={createdVote.resultsUrl} className="link-text">{resultsFullUrl}</a>
+              <CopyButton text={resultsFullUrl} label="Copy results URL" />
+            </div>
+          </div>
         </div>
 
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
@@ -124,7 +144,7 @@ export default function CreateVotePage() {
   }
 
   return (
-    <div>
+    <div className="fade-in">
       <h1>Create a New Vote</h1>
       <p className="muted" style={{ marginBottom: '1.5rem' }}>
         Use ranked choice voting to decide where to eat (or anything else).

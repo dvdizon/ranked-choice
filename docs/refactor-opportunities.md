@@ -69,54 +69,84 @@ Allow:
 
 **Why not now**: Not needed for MVP; would add complexity.
 
+### 9. QR Code Generation
+Generate QR codes for:
+- Vote page URL
+- Results page URL
+- Easy sharing in person
+
+**Why not now**: Copy buttons are sufficient for digital sharing; QR adds a dependency.
+
+### 10. Vote Templates
+Save and reuse vote configurations:
+- Weekly lunch polls with same options
+- Recurring team decisions
+
+**Why not now**: Creating a new vote is quick enough; templates add complexity.
+
 ## UX
 
-### 9. Touch-Optimized Drag and Drop
-The current drag-and-drop works but could be improved:
-- Use a library like `@dnd-kit/core`
-- Better touch handling
-- Smoother animations
+### 11. Keyboard Shortcuts
+Add keyboard shortcuts for power users:
+- Number keys to rank options quickly
+- Enter to submit ballot
+- Tab navigation improvements
 
-**Why not now**: The up/down buttons work well on mobile; drag-and-drop is a nice-to-have.
+**Why not now**: Mouse/touch interface is sufficient for casual use.
 
-### 10. Copy-to-Clipboard for Links/Secret
-Add one-click copy buttons for:
-- Vote URL
-- Results URL
-- Write secret
+### 12. Undo/Redo for Rankings
+Allow users to undo/redo ranking changes:
+- Track ranking history
+- Revert accidental changes
 
-**Why not now**: Users can select and copy; not critical for MVP.
+**Why not now**: Users can manually fix mistakes; undo adds state complexity.
 
-### 11. Dark Mode
-Add a dark mode toggle or respect system preference.
+### 13. Drag Between Lists
+Allow dragging options directly from Available Options to a specific position in Rankings:
+- Currently must add then reorder
+- Would improve workflow for many options
 
-**Why not now**: Light mode is fine for MVP.
+**Why not now**: Click-to-add + reorder works well enough.
 
-### 12. Animations and Transitions
-Add:
-- Page transitions
-- Ranking list animations
-- Loading skeletons
+### 14. Results Sharing Image
+Generate a shareable image of results:
+- Social media friendly
+- Include winner and vote breakdown
 
-**Why not now**: Adds complexity; basic UX is sufficient.
+**Why not now**: Direct link sharing is sufficient.
+
+### 15. Accessibility Audit
+Comprehensive accessibility improvements:
+- ARIA live regions for dynamic content
+- Better screen reader announcements
+- High contrast mode
+
+**Why not now**: Basic accessibility is in place; comprehensive audit deferred.
 
 ## Security
 
-### 13. Rate Limiting
+### 16. Rate Limiting
 Add rate limiting to:
 - Prevent ballot spam
 - Prevent vote creation spam
 
 **Why not now**: The write secret prevents unauthorized ballots; for friends-only use, this is sufficient.
 
-### 14. CSRF Protection
+### 17. CSRF Protection
 Add CSRF tokens to forms.
 
 **Why not now**: The write secret provides similar protection for ballot submission; could be added later.
 
+### 18. Content Security Policy
+Add CSP headers to prevent:
+- XSS attacks
+- Injection vulnerabilities
+
+**Why not now**: No user-generated content displayed unsanitized; low risk.
+
 ## Testing
 
-### 15. E2E Tests
+### 19. E2E Tests
 Add end-to-end tests with Playwright or Cypress:
 - Full vote creation flow
 - Ballot submission
@@ -124,40 +154,91 @@ Add end-to-end tests with Playwright or Cypress:
 
 **Why not now**: IRV unit tests cover the critical logic; E2E can be added later.
 
-### 16. API Integration Tests
+### 20. API Integration Tests
 Add tests for API routes with a test database.
 
 **Why not now**: The API routes are thin wrappers; unit tests for IRV are sufficient.
 
+### 21. Visual Regression Tests
+Screenshot testing for:
+- Dark/light mode consistency
+- Responsive layouts
+- Component appearance
+
+**Why not now**: Manual testing is sufficient for small project.
+
 ## DevOps
 
-### 17. Docker Support
+### 22. Docker Support
 Add Dockerfile and docker-compose for:
 - Easier development setup
 - Containerized deployment
 
 **Why not now**: The target is a simple droplet deployment; Docker adds complexity.
 
-### 18. CI/CD Pipeline
-Add GitHub Actions for:
-- Running tests on PR
-- Automated deployment
-- Linting
-
-**Why not now**: Manual deployment is fine for a small project.
-
-### 19. Health Check Endpoint
+### 23. Health Check Endpoint
 Add `/api/health` that checks:
 - Database connectivity
 - App version
 
 **Why not now**: nginx config includes a basic `/health` endpoint; app-level health check could be added.
 
+### 24. Metrics and Monitoring
+Add observability:
+- Request latency metrics
+- Error rate tracking
+- Usage analytics
+
+**Why not now**: Simple logs are sufficient for friends-only use.
+
+### 25. Database Backup Automation
+Automated SQLite backups:
+- Scheduled backups
+- Retention policy
+- Restore testing
+
+**Why not now**: Manual backups are sufficient for low-stakes data.
+
+## Performance
+
+### 26. Results Caching
+Cache election results:
+- Invalidate on new ballot
+- Reduce computation for popular votes
+
+**Why not now**: IRV calculation is fast; caching adds complexity.
+
+### 27. Static Generation for Results
+Use ISR (Incremental Static Regeneration) for results pages:
+- Faster page loads
+- Reduced server load
+
+**Why not now**: Dynamic rendering is fast enough for small scale.
+
+### 28. Bundle Size Optimization
+Reduce JavaScript bundle size:
+- Code splitting
+- Tree shaking audit
+- Lazy loading components
+
+**Why not now**: Current bundle size (~100KB) is acceptable for the use case.
+
+---
+
+## Recently Implemented
+
+The following items were previously in this list and have been implemented:
+
+- **Touch-Optimized Drag and Drop** (UX #9) - Implemented using `@dnd-kit/core` with proper touch/pointer sensors
+- **Copy-to-Clipboard for Links/Secret** (UX #10) - Added copy buttons for secret and URLs on vote creation
+- **Dark Mode** (UX #11) - Added theme toggle with system preference detection and persistence
+- **Animations and Transitions** (UX #12) - Added fade-in animations, loading skeletons, and smooth transitions
+
 ---
 
 ## How to Use This Document
 
 1. When considering a new feature, check if it's listed here
-2. If implementing something from this list, remove it and document the change
+2. If implementing something from this list, move it to "Recently Implemented" and document the change
 3. Add new ideas here instead of implementing them immediately
 4. Discuss with friends before expanding scope
