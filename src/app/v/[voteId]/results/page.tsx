@@ -27,9 +27,16 @@ interface Vote {
   options: string[]
 }
 
+interface Ballot {
+  voter_name: string
+  rankings: string[]
+  created_at: string
+}
+
 interface ResultsData {
   vote: Vote
   results: Results
+  ballots: Ballot[]
 }
 
 export default function ResultsPage() {
@@ -119,7 +126,7 @@ export default function ResultsPage() {
     return null
   }
 
-  const { vote, results } = data
+  const { vote, results, ballots } = data
   const maxVotes = Math.max(
     ...results.rounds.flatMap((r) => Object.values(r.tallies)),
     1
@@ -222,6 +229,37 @@ export default function ResultsPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Ballots section */}
+      {ballots && ballots.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h2>All Ballots</h2>
+          <p className="muted" style={{ marginBottom: '1rem' }}>
+            See who voted and their rankings.
+          </p>
+          <div className="card">
+            {ballots.map((ballot, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: '1rem',
+                  borderBottom: index < ballots.length - 1 ? '1px solid var(--border)' : 'none',
+                }}
+              >
+                <p style={{ marginBottom: '0.5rem' }}>
+                  <strong>{ballot.voter_name || 'Anonymous'}</strong> -{' '}
+                  <span className="muted">{new Date(ballot.created_at).toLocaleString()}</span>
+                </p>
+                <ol style={{ marginLeft: '1.5rem', marginBottom: 0 }}>
+                  {ballot.rankings.map((option) => (
+                    <li key={option}>{option}</li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -11,7 +11,7 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, options, voteId: requestedId, writeSecret: requestedSecret } = body
+    const { title, options, voteId: requestedId, writeSecret: requestedSecret, voterNamesRequired } = body
 
     // Validate title
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       voteId = canonicalizeVoteId(requestedId.trim())
       if (!isValidVoteId(voteId)) {
         return NextResponse.json(
-          { error: 'Vote ID must be 3-32 alphanumeric characters' },
+          { error: 'Vote ID must be 3-32 characters (lowercase letters, numbers, and dashes)' },
           { status: 400 }
         )
       }
@@ -82,7 +82,13 @@ export async function POST(request: NextRequest) {
     const writeSecretHash = await hashSecret(writeSecret)
 
     // Create the vote
-    const vote = createVote(voteId, title.trim(), cleanOptions, writeSecretHash)
+    const vote = createVote(
+      voteId,
+      title.trim(),
+      cleanOptions,
+      writeSecretHash,
+      voterNamesRequired !== false // Default to true if not specified
+    )
 
     return NextResponse.json({
       success: true,

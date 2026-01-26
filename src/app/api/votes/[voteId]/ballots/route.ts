@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getVote, createBallot, countBallots } from '@/lib/db'
+import { getVote, createBallot, countBallots, getBallotsByVoteId, appendVoteOptions } from '@/lib/db'
 import { verifySecret, canonicalizeVoteId } from '@/lib/auth'
 
 export async function POST(
@@ -20,7 +20,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { rankings, writeSecret } = body
+    const { rankings, writeSecret, voterName, customOptions } = body
 
     // Verify write secret
     if (!writeSecret || typeof writeSecret !== 'string') {
@@ -30,12 +30,52 @@ export async function POST(
       )
     }
 
+    // Validate voter name if required
+    if (vote.voter_names_required) {
+      if (!voterName || typeof voterName !== 'string' || voterName.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Voter name is required' },
+          { status: 400 }
+        )
+      }
+    }
+
     const isValid = await verifySecret(writeSecret, vote.write_secret_hash)
     if (!isValid) {
       return NextResponse.json(
         { error: 'Invalid write secret' },
         { status: 403 }
       )
+    }
+
+    // Check if voting is closed
+    if (vote.closed_at) {
+      return NextResponse.json(
+        { error: 'Voting is closed for this poll' },
+        { status: 403 }
+      )
+    }
+
+    // Add custom options to the vote if provided
+    if (customOptions && Array.isArray(customOptions) && customOptions.length > 0) {
+      // Validate custom options
+      for (const option of customOptions) {
+        if (typeof option !== 'string' || option.trim().length === 0) {
+          return NextResponse.json(
+            { error: 'Invalid custom option format' },
+            { status: 400 }
+          )
+        }
+      }
+
+      // Append custom options to vote
+      appendVoteOptions(voteId, customOptions)
+
+      // Reload vote to include new options
+      const updatedVote = getVote(voteId)
+      if (updatedVote) {
+        vote.options = updatedVote.options
+      }
     }
 
     // Validate rankings
@@ -73,7 +113,11 @@ export async function POST(
     }
 
     // Create ballot
-    const ballot = createBallot(voteId, rankings)
+    const ballot = createBallot(
+      voteId,
+      rankings,
+      voterName && typeof voterName === 'string' ? voterName.trim() : ''
+    )
     const totalBallots = countBallots(voteId)
 
     return NextResponse.json({
@@ -81,6 +125,7 @@ export async function POST(
       ballot: {
         id: ballot.id,
         rankings: ballot.rankings,
+        voter_name: ballot.voter_name,
         created_at: ballot.created_at,
       },
       totalBallots,
@@ -89,6 +134,62 @@ export async function POST(
     console.error('Error submitting ballot:', error)
     return NextResponse.json(
       { error: 'Failed to submit ballot' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ voteId: string }> }
+) {
+  try {
+    const { voteId: rawId } = await params
+    const voteId = canonicalizeVoteId(rawId)
+
+    const vote = getVote(voteId)
+
+    if (!vote) {
+      return NextResponse.json(
+        { error: 'Vote not found' },
+        { status: 404 }
+      )
+    }
+
+    // Verify write secret for admin access
+    const writeSecret = request.headers.get('X-Write-Secret')
+
+    if (!writeSecret) {
+      return NextResponse.json(
+        { error: 'Write secret is required' },
+        { status: 401 }
+      )
+    }
+
+    const isValid = await verifySecret(writeSecret, vote.write_secret_hash)
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Invalid write secret' },
+        { status: 403 }
+      )
+    }
+
+    // Get all ballots for this vote
+    const ballots = getBallotsByVoteId(voteId)
+
+    return NextResponse.json({
+      success: true,
+      ballots: ballots.map((ballot) => ({
+        id: ballot.id,
+        rankings: ballot.rankings,
+        voter_name: ballot.voter_name,
+        created_at: ballot.created_at,
+      })),
+    })
+  } catch (error) {
+    console.error('Error fetching ballots:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch ballots' },
       { status: 500 }
     )
   }

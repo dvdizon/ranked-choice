@@ -38,10 +38,10 @@ export async function verifySecret(secret: string, hash: string): Promise<boolea
 }
 
 /**
- * Validate vote ID format (lowercase alphanumeric only)
+ * Validate vote ID format (lowercase alphanumeric and dashes)
  */
 export function isValidVoteId(id: string): boolean {
-  return /^[a-z0-9]+$/.test(id) && id.length >= 3 && id.length <= 32
+  return /^[a-z0-9-]+$/.test(id) && id.length >= 3 && id.length <= 32
 }
 
 /**

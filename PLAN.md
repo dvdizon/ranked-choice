@@ -55,14 +55,19 @@ These rules apply to *all* implementation decisions:
 ### Core User Flows
 
 - **Create a vote**
-  - User chooses a voteId (alphanumeric only) or one is generated
+  - User chooses a voteId (alphanumeric and dashes) or one is generated
   - User enters options (e.g., restaurants)
   - Optional write secret (passcode)
+  - Toggle to require voter names (default: required, can disable for anonymous voting)
+  - Receives admin URL for vote management
 
 - **Vote**
   - Accessible at `/v/:voteId`
-  - Rank options (drag/drop or up/down)
-  - Partial ranking allowed
+  - All options start ranked in random order (opt-out behavior)
+  - Reorder by drag/drop or up/down buttons
+  - Remove unwanted options
+  - Add custom "Other" options (become available for other voters)
+  - Enter voter name (required/optional based on vote settings, visible to all when provided)
   - Requires write secret to submit
 
 - **View Results**
@@ -73,6 +78,15 @@ These rules apply to *all* implementation decisions:
     - Round-by-round tallies
     - Eliminated option per round
     - Active ballot count per round
+    - All ballots with voter names (or "Anonymous") and rankings
+
+- **Admin Panel**
+  - Accessible at `/v/:voteId/admin`
+  - Requires write secret authentication
+  - View all ballots with voter details
+  - Delete individual ballots or entire vote
+  - Close/reopen voting
+  - Edit vote options
 
 ---
 
@@ -255,14 +269,22 @@ Decisions will be recorded below.
 
 All meaningful behavior changes must be logged here.
 
-- YYYY-MM-DD — Initial plan created
+- 2026-01-25 — Made voter names optional (creator decides) - Supersedes DR-2026-01-25-01, See DR-2026-01-25-05
+- 2026-01-25 — Replaced "Friday Lunch" with generic examples (not lunch-specific)
+- 2026-01-25 — Added voter names (non-anonymous ballots) - Superseded by DR-2026-01-25-05
+- 2026-01-25 — Changed to opt-out voting behavior (all options pre-ranked) - See DR-2026-01-25-02
+- 2026-01-25 — Added dynamic "Other" options - See DR-2026-01-25-03
+- 2026-01-25 — Added admin panel with full vote management - See DR-2026-01-25-04
+- 2026-01-25 — Allowed dashes in vote IDs (e.g., team-lunch)
+- 2026-01-24 — Initial plan created
 
 ---
 
 ## 11. Status Snapshot (Living Section)
 
-- Current phase: **Phase 0 — Planning**
-- Next step: **Run Codex with execution prompt**
+- Current phase: **Phase 4+ — UX Enhancements & Features**
+- Recent additions: Admin panel, voter names, custom options, opt-out UX
+- Next step: Testing and refinement
 - Known blockers: _None_
 
 ---
@@ -319,6 +341,220 @@ What does this decision affect?
 
 #### Notes
 Optional clarifications, edge cases, or follow-ups.
+
+---
+
+### DR-2026-01-25-01: Non-Anonymous Voting with Voter Names
+
+**Decision ID:** DR-2026-01-25-01
+**Status:** Superseded by DR-2026-01-25-05
+**Date:** 2026-01-25
+**Deciders:** User (David)
+
+#### Context
+The original design had anonymous ballots. For coordination purposes (meeting up after voting), users needed to know who voted and what their preferences were.
+
+#### Options Considered
+- **Option A: Keep ballots anonymous**
+  - Maintains privacy but prevents coordination
+- **Option B: Add required voter name field**
+  - Enables coordination and accountability
+  - Names visible to all voters and admin
+
+#### Decision
+Implement Option B - Add required voter name field to all ballots.
+
+#### Rationale
+- Primary use case is coordinating meetups among friends
+- Transparency helps with trust and coordination
+- Users are already sharing a write secret, so not truly anonymous
+- Voter names enable post-vote discussion and planning
+
+#### Consequences
+- `ballots` table requires `voter_name` column
+- Database migration needed for existing data
+- Ballot submission UI requires name input
+- Results page displays all voter names
+- Admin panel shows voter names for each ballot
+
+#### Scope
+- [x] UX / product behavior
+- [x] Data model
+
+---
+
+### DR-2026-01-25-02: Opt-Out Voting Behavior
+
+**Decision ID:** DR-2026-01-25-02
+**Status:** Accepted
+**Date:** 2026-01-25
+**Deciders:** User (David)
+
+#### Context
+Original voting UX was opt-in: voters manually added options they wanted to rank. This created cognitive burden and could lead to ballot exhaustion if voters forgot to add preferred options.
+
+#### Options Considered
+- **Option A: Keep opt-in (add what you want)**
+  - Voters click "+" to add options to rankings
+  - Empty rankings by default
+- **Option B: Opt-out (remove what you don't want)**
+  - All options pre-ranked in random order
+  - Voters remove unwanted options
+  - Reduces cognitive load
+
+#### Decision
+Implement Option B - Start with all options ranked in randomized order.
+
+#### Rationale
+- Reduces voter effort and cognitive load
+- Prevents accidental ballot exhaustion from forgetting to add options
+- Random initial order prevents positional bias
+- Aligns with "choose what NOT to do" mental model
+- Better default for small groups deciding where to eat
+
+#### Consequences
+- Voting page loads with all options already ranked
+- Fisher-Yates shuffle ensures randomization
+- "Removed Options" section appears only after removal
+- Help text updated to reflect opt-out behavior
+
+#### Scope
+- [x] UX / product behavior
+
+---
+
+### DR-2026-01-25-03: Dynamic "Other" Options
+
+**Decision ID:** DR-2026-01-25-03
+**Status:** Accepted
+**Date:** 2026-01-25
+**Deciders:** User (David)
+
+#### Context
+Voters sometimes think of options not included in the original list. Enabling dynamic option addition allows for more flexible decision-making.
+
+#### Options Considered
+- **Option A: Fixed options only**
+  - Only vote creator can set options
+  - No changes after vote creation
+- **Option B: Allow voters to suggest "Other" options**
+  - Voters can add custom options during ballot submission
+  - Custom options become available for subsequent voters
+  - Case-insensitive duplicate checking
+
+#### Decision
+Implement Option B - Allow voters to add custom options dynamically.
+
+#### Rationale
+- Enables discovery of options not initially considered
+- Maintains flexibility for casual group decisions
+- New options become part of the vote organically
+- Supports use case: someone suggests a new restaurant
+
+#### Consequences
+- Voting UI includes "+ Add Custom Option" button
+- Custom options sent with ballot submission
+- `appendVoteOptions()` function adds options to vote
+- Duplicate checking prevents redundant options
+- Custom options appear for all subsequent voters
+- Admin can still manage options via admin panel
+
+#### Scope
+- [x] UX / product behavior
+- [x] Data model
+
+---
+
+### DR-2026-01-25-04: Admin Panel for Vote Management
+
+**Decision ID:** DR-2026-01-25-04
+**Status:** Accepted
+**Date:** 2026-01-25
+**Deciders:** User (David)
+
+#### Context
+Vote creators needed way to manage their votes: view ballots, handle mistakes, remove inappropriate submissions, and control voting state.
+
+#### Options Considered
+- **Option A: Read-only votes**
+  - No admin capabilities
+  - Votes immutable after creation
+- **Option B: Admin panel with write secret authentication**
+  - View all ballots
+  - Delete ballots/votes
+  - Close/reopen voting
+  - Edit options
+
+#### Decision
+Implement Option B - Full-featured admin panel.
+
+#### Rationale
+- Vote creators need control over their votes
+- Enables error correction (delete duplicate/test ballots)
+- Allows closing vote when decision is made
+- Write secret provides sufficient authentication for small groups
+- Editing options enables adding forgotten choices
+
+#### Consequences
+- New route: `/v/:voteId/admin`
+- Admin URL provided at vote creation
+- Database functions: `deleteVote`, `deleteBallot`, `closeVote`, `reopenVote`, `updateVoteOptions`
+- API routes: DELETE and PATCH on `/api/votes/:voteId`
+- Closed votes prevent new ballot submissions
+- Editing options cleans up existing ballots (removes deleted options)
+
+#### Scope
+- [x] UX / product behavior
+- [x] Security / abuse prevention
+- [x] Data model
+
+---
+
+### DR-2026-01-25-05: Optional Voter Names (Supersedes DR-2026-01-25-01)
+
+**Decision ID:** DR-2026-01-25-05
+**Status:** Accepted
+**Date:** 2026-01-25
+**Deciders:** User (David)
+
+#### Context
+Initially implemented required voter names for all votes (DR-2026-01-25-01). User realized this prevented anonymous voting use cases. The app should support both coordinated (named) and anonymous voting, with the vote creator deciding which to use.
+
+#### Options Considered
+- **Option A: Keep voter names always required**
+  - Maintains coordination capability
+  - Prevents anonymous voting use cases
+- **Option B: Make voter names optional per vote**
+  - Vote creator chooses requirement during vote creation
+  - Checkbox on creation form (default: required)
+  - Supports both anonymous and coordinated voting
+
+#### Decision
+Implement Option B - Vote creators decide whether names are required.
+
+#### Rationale
+- Flexibility for different use cases (some groups want anonymity, others want coordination)
+- Vote creator knows their group's needs best
+- Default to required (coordination use case) but allow anonymous option
+- Maintains backward compatibility (defaults to required like before)
+- Simple UI: single checkbox on creation form
+
+#### Consequences
+- Added `voter_names_required` column to `votes` table (INTEGER, default 1)
+- Vote creation UI includes checkbox (default: checked)
+- Ballot submission conditionally validates voter name
+- Voting page shows name field as "optional" when not required
+- Results and admin panels display "Anonymous" for empty voter names
+- API responses include `voter_names_required` field
+
+#### Scope
+- [x] UX / product behavior
+- [x] Data model
+
+#### Notes
+- Supersedes DR-2026-01-25-01 (voter names always required)
+- Empty voter_name is stored as empty string in database
+- Migration adds column with default value 1 (required) for existing votes
 
 ---
 

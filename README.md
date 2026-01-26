@@ -63,26 +63,57 @@ npm test
 ### Creating a Vote
 
 1. Go to the home page
-2. Enter a title (e.g., "Friday Lunch")
+2. Enter a title (e.g., "Team Lunch Decision")
 3. Enter options (one per line)
-4. Optionally set a custom vote ID and write secret
-5. Click "Create Vote"
-6. **Save the write secret!** It's shown only once.
+4. Choose whether to require voter names (checkbox, default: required)
+   - **Required**: Voters must provide their name (good for coordination)
+   - **Optional**: Anonymous voting allowed
+5. Optionally set a custom vote ID (e.g., `team-lunch`) and write secret
+6. Click "Create Vote"
+7. **Save the write secret!** It's shown only once and needed for:
+   - Submitting ballots
+   - Accessing the admin panel
+
+You'll receive three URLs:
+- **Vote page**: Share with voters
+- **Results page**: View live results
+- **Admin panel**: Manage the vote (requires write secret)
 
 ### Submitting a Ballot
 
 1. Go to `/v/<vote-id>`
-2. Rank options by clicking or dragging
-3. Enter the write secret
-4. Submit your ballot
+2. All options start ranked in random order
+3. Reorder by dragging or using ↑/↓ buttons
+4. Remove options you don't want by clicking ×
+5. Optionally add custom options with "+ Add Custom Option"
+6. Enter your name (required or optional based on vote settings)
+7. Enter the write secret
+8. Submit your ballot
 
-Partial rankings are allowed - you don't have to rank every option.
+**Notes:**
+- Partial rankings allowed - you can remove any options you're indifferent about
+- Custom options you add become available for other voters
+- If voter names are required, your name will be visible on the results page
+- If voter names are optional and you don't provide one, you'll appear as "Anonymous"
 
 ### Viewing Results
 
 1. Go to `/v/<vote-id>/results`
 2. See the winner (or tie)
 3. View round-by-round elimination details
+4. See all submitted ballots with voter names (or "Anonymous" if name not provided)
+
+### Managing a Vote (Admin Panel)
+
+1. Go to `/v/<vote-id>/admin`
+2. Enter the write secret
+3. Available actions:
+   - View all ballots with voter names (or "Anonymous") and timestamps
+   - Delete individual ballots (e.g., duplicates or test submissions)
+   - Delete the entire vote permanently
+   - Close voting (prevents new ballot submissions)
+   - Reopen voting (allows new submissions again)
+   - Edit vote options (removes deleted options from existing ballots)
 
 ---
 
@@ -162,22 +193,39 @@ See `.gitlab-ci.yml` comments for detailed setup instructions.
 - **Reverse proxy:** nginx
 - **Port:** 3100 (configurable)
 
+### Key Features
+
+- **Ranked Choice Voting (IRV)**: Instant-runoff voting with explainable round-by-round results
+- **Opt-Out Voting UX**: All options pre-ranked; remove unwanted choices
+- **Custom Options**: Voters can suggest new options dynamically
+- **Flexible Anonymity**: Vote creators choose whether names are required (default) or optional for anonymous voting
+- **Admin Panel**: Full vote management (delete, close/reopen, edit options)
+- **Vote IDs**: Support dashes for readable URLs (e.g., `/v/team-lunch`)
+
 ### Key Files
 
 ```
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── page.tsx           # Home / Create vote
-│   ├── v/[voteId]/        # Vote page
-│   │   ├── page.tsx       # Ballot submission
-│   │   └── results/       # Results page
+│   ├── v/[voteId]/        # Vote pages
+│   │   ├── page.tsx       # Ballot submission (opt-out UX, custom options)
+│   │   ├── results/       # Results with voter names
+│   │   └── admin/         # Admin panel
 │   └── api/               # API routes
 │       └── votes/         # Vote/ballot endpoints
+│           ├── route.ts                    # Create vote
+│           └── [voteId]/
+│               ├── route.ts                # GET/DELETE/PATCH vote
+│               ├── ballots/
+│               │   ├── route.ts            # Submit/view ballots
+│               │   └── [ballotId]/route.ts # Delete ballot
+│               └── results/route.ts        # IRV results
 └── lib/
     ├── db.ts              # SQLite database layer
     ├── irv.ts             # IRV algorithm (pure function)
     ├── irv.test.ts        # IRV unit tests
-    └── auth.ts            # Secret generation/hashing
+    └── auth.ts            # Secret generation/hashing/validation
 
 deploy/
 ├── pm2/ecosystem.config.cjs  # PM2 configuration
