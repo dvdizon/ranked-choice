@@ -284,6 +284,7 @@ All meaningful behavior changes must be logged here.
 - 2026-01-25 — Added admin panel with full vote management - See DR-2026-01-25-04
 - 2026-01-25 — Allowed dashes in vote IDs (e.g., team-lunch)
 - 2026-01-26 — Standardized base path handling for `/rcv` deployments (links, API calls, redirects)
+- 2026-01-26 — Deduplicated base path prefixes in internal navigation links
 - 2026-01-24 — Initial plan created
 
 ---
@@ -687,5 +688,45 @@ Implement Option B - serve the app under `/rcv` and normalize internal paths.
 
 #### Notes
 - If deployment changes to root hosting, remove the basePath and helper usage.
+
+---
+
+### DR-2026-01-26-02: Normalize Repeated Base Path Prefixes in Links
+
+**Decision ID:** DR-2026-01-26-02
+**Status:** Accepted
+**Date:** 2026-01-26
+**Deciders:** User (David)
+
+#### Context
+After adding basePath support, some client-side links could accidentally include
+the base path twice (for example, `/rcv/rcv/...`), leading to broken navigation.
+
+#### Options Considered
+- **Option A: Audit every link call site**
+  - Remove any duplicate base path additions manually
+  - High risk of regressions as new links are added
+- **Option B: Make `withBasePath()` idempotent**
+  - Normalize repeated base path prefixes in the helper
+  - Ensures links are safe even if the helper is applied multiple times
+
+#### Decision
+Implement Option B - normalize repeated base path prefixes in `withBasePath()`.
+
+#### Rationale
+- Centralizes the fix in the shared helper
+- Keeps link usage consistent across the codebase
+- Prevents accidental `/rcv/rcv` URLs across navigation and shared links
+
+#### Consequences
+- `withBasePath()` now deduplicates repeated `/rcv` prefixes
+- Client navigation and shared URLs remain stable if paths are wrapped twice
+
+#### Scope
+- [x] UX / product behavior
+- [x] Deployment / ops
+
+#### Notes
+- The helper remains the single source of truth for base path handling.
 
 ---

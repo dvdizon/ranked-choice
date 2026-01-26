@@ -177,7 +177,8 @@ See [deploy/README.md](deploy/README.md) for detailed deployment instructions.
 
    Assumption: The production setup serves the app under `/rcv`. Keep
    `basePath: '/rcv'` in `next.config.js` before building, or asset paths will
-   break when proxied under `/rcv`.
+   break when proxied under `/rcv`. Internal links rely on `withBasePath()` and
+   normalize duplicate `/rcv` prefixes to avoid `/rcv/rcv` URLs.
 
 6. **Enable HTTPS**
    ```bash
