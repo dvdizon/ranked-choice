@@ -189,10 +189,29 @@ See [deploy/README.md](deploy/README.md) for detailed deployment instructions.
 
 ## CI/CD Pipeline
 
-This project includes a GitLab CI/CD pipeline (`.gitlab-ci.yml`) that automates:
+This project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that automates:
 
 | Stage | Purpose |
 |-------|---------|
+| `lint` | ESLint checks |
+| `typecheck` | TypeScript type checking |
+| `test` | Jest unit tests with coverage |
+| `build` | Next.js production build |
+| `deploy_production` | SSH-based deployment (manual trigger) |
+
+### Enabling Deployment
+
+Deployment requires configuring GitHub Actions secrets:
+- `DEPLOY_HOST` - Server hostname
+- `DEPLOY_USER` - SSH username
+- `DEPLOY_SSH_KEY` - SSH private key
+- `DEPLOY_PATH` - Application directory on server
+- `DEPLOY_PORT` - SSH port (optional, default: 22)
+- `PM2_PROCESS_NAME` - pm2 process name (optional, default: rcv-lunch)
+
+See `.github/workflows/ci.yml` for details. The existing `.gitlab-ci.yml` remains as a reference if you still run GitLab CI.
+
+-------|---------|
 | `validate` | ESLint + TypeScript type checking |
 | `test` | Jest unit tests with coverage |
 | `build` | Next.js production build |
@@ -339,3 +358,5 @@ If you are using Claude Code or another AI coding agent, start there.
 
 This project is intended for personal / small-group use.
 License to be added if/when needed.
+
+

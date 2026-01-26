@@ -139,14 +139,16 @@ See `deploy/README.md` for detailed instructions.
 
 ## CI/CD
 
-GitLab CI/CD pipeline runs:
+GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
 - **lint** - ESLint checks
-- **test** - Jest unit tests
+- **typecheck** - TypeScript type checking
+- **test** - Jest unit tests with coverage
 - **build** - Next.js production build
-- **deploy** - Automated deployment (requires secrets)
+- **deploy_production** - SSH-based deployment (manual trigger)
 
-See `.gitlab-ci.yml` for configuration.
+The existing `.gitlab-ci.yml` remains as a reference if GitLab CI is still used.
 
+See `.github/workflows/ci.yml` for configuration.
 ## Key Files
 
 | File | Purpose |
@@ -208,3 +210,5 @@ From PLAN.md - do not modify without recording a Decision Record:
 - Check `PLAN.md` for requirements clarity
 - Check `docs/refactor-opportunities.md` for intentionally deferred features
 - Check `docs/CHANGELOG.md` for context on past decisions
+
+
