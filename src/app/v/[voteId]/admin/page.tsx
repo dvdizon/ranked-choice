@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { withBasePath } from '@/lib/paths'
 
 interface Vote {
   id: string
@@ -43,7 +44,7 @@ export default function AdminPage() {
 
     try {
       // Fetch vote data to verify
-      const res = await fetch(`/api/votes/${voteId}`)
+      const res = await fetch(withBasePath(`/api/votes/${voteId}`))
       if (!res.ok) {
         setError('Vote not found')
         setLoading(false)
@@ -53,7 +54,7 @@ export default function AdminPage() {
       setVote(voteData)
 
       // Fetch ballots to verify secret
-      const ballotsRes = await fetch(`/api/votes/${voteId}/ballots`, {
+      const ballotsRes = await fetch(withBasePath(`/api/votes/${voteId}/ballots`), {
         headers: {
           'X-Write-Secret': writeSecret,
         },
@@ -84,7 +85,7 @@ export default function AdminPage() {
     setError('')
 
     try {
-      const res = await fetch(`/api/votes/${voteId}`, {
+      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret }),
@@ -98,7 +99,7 @@ export default function AdminPage() {
       }
 
       alert('Vote deleted successfully')
-      router.push('/')
+      router.push(withBasePath('/'))
     } catch (err) {
       setError('Network error')
       setLoading(false)
@@ -111,7 +112,7 @@ export default function AdminPage() {
     }
 
     try {
-      const res = await fetch(`/api/votes/${voteId}/ballots/${ballotId}`, {
+      const res = await fetch(withBasePath(`/api/votes/${voteId}/ballots/${ballotId}`), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret }),
@@ -141,7 +142,7 @@ export default function AdminPage() {
     setError('')
 
     try {
-      const res = await fetch(`/api/votes/${voteId}`, {
+      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret, action }),
@@ -180,7 +181,7 @@ export default function AdminPage() {
     setLoading(true)
 
     try {
-      const res = await fetch(`/api/votes/${voteId}`, {
+      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret, action: 'updateOptions', options }),
@@ -198,7 +199,7 @@ export default function AdminPage() {
       setEditingOptions(false)
 
       // Reload ballots to see updated rankings
-      const ballotsRes = await fetch(`/api/votes/${voteId}/ballots`, {
+      const ballotsRes = await fetch(withBasePath(`/api/votes/${voteId}/ballots`), {
         headers: {
           'X-Write-Secret': writeSecret,
         },
@@ -238,7 +239,7 @@ export default function AdminPage() {
     setLoading(true)
 
     try {
-      const res = await fetch(`/api/votes/${voteId}`, {
+      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -311,7 +312,7 @@ export default function AdminPage() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => router.push(`/v/${voteId}`)}
+              onClick={() => router.push(withBasePath(`/v/${voteId}`))}
             >
               Back to Vote
             </button>
@@ -365,7 +366,7 @@ export default function AdminPage() {
           </button>
           <button
             className="btn-secondary"
-            onClick={() => router.push(`/v/${voteId}/results`)}
+            onClick={() => router.push(withBasePath(`/v/${voteId}/results`))}
           >
             View Results
           </button>

@@ -9,6 +9,10 @@ This document tracks work history, including what was implemented by AI agents a
 ## [Unreleased]
 
 ### Added
+- **Base Path Support**
+  - Standardized `/rcv` deployment with `basePath` and shared `withBasePath()` helper
+  - Updated internal navigation, API calls, and redirects to respect the base path
+  - Documented `/rcv` prefix in deployment and API docs
 - **Auto-Close Feature** - Schedule automatic vote closing
   - Added `auto_close_at` column to votes table with migration support
   - Date/time picker on vote creation form

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getVote, countBallots, deleteVote, closeVote, reopenVote, updateVoteOptions, setAutoCloseAt } from '@/lib/db'
 import { canonicalizeVoteId, verifySecret } from '@/lib/auth'
+import { withBasePath } from '@/lib/paths'
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
 
     // Redirect if ID was not canonical
     if (rawId !== voteId) {
-      return NextResponse.redirect(new URL(`/api/votes/${voteId}`, request.url))
+      return NextResponse.redirect(new URL(withBasePath(`/api/votes/${voteId}`), request.url))
     }
 
     const vote = getVote(voteId)

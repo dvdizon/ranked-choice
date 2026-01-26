@@ -59,7 +59,8 @@ src/
     ├── db.ts              # SQLite database layer
     ├── irv.ts             # Pure IRV algorithm
     ├── irv.test.ts        # IRV unit tests
-    └── auth.ts            # Secret hashing/validation
+    ├── auth.ts            # Secret hashing/validation
+    └── paths.ts           # Base path helper for internal URLs
 
 deploy/
 ├── nginx/rcv-lunch.conf   # nginx site config
@@ -120,6 +121,11 @@ DATABASE_PATH=/var/lib/rcv-lunch/rcv.sqlite  # Production
 BASE_URL=https://your-domain.com       # Optional
 ADMIN_SECRET=                          # Optional - enables admin API endpoints for API key management
 ```
+
+### Base Path Assumption
+Production deployments may serve the app under `/rcv`. When that is true,
+`next.config.js` must set `basePath: '/rcv'`, and internal navigation should
+use `withBasePath()` from `src/lib/paths.ts`.
 
 ### Production Checklist
 1. Create data directory: `sudo mkdir -p /var/lib/rcv-lunch`

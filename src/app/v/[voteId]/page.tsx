@@ -22,6 +22,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { withBasePath } from '@/lib/paths'
 
 interface Vote {
   id: string
@@ -150,7 +151,7 @@ export default function VotePage() {
   useEffect(() => {
     const lower = voteId.toLowerCase()
     if (voteId !== lower) {
-      router.replace(`/v/${lower}`)
+      router.replace(withBasePath(`/v/${lower}`))
     }
   }, [voteId, router])
 
@@ -170,7 +171,7 @@ export default function VotePage() {
 
     const fetchVote = async () => {
       try {
-        const res = await fetch(`/api/votes/${voteId}`)
+        const res = await fetch(withBasePath(`/api/votes/${voteId}`))
         if (!res.ok) {
           if (res.status === 404) {
             setError('Vote not found')
@@ -284,7 +285,7 @@ export default function VotePage() {
     const customOptions = rankings.filter((option) => !originalOptions.has(option))
 
     try {
-      const res = await fetch(`/api/votes/${voteId}/ballots`, {
+      const res = await fetch(withBasePath(`/api/votes/${voteId}/ballots`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -329,7 +330,7 @@ export default function VotePage() {
       <div className="fade-in">
         <h1>Error</h1>
         <p className="error">{error}</p>
-        <button onClick={() => router.push('/')}>Create a New Vote</button>
+        <button onClick={() => router.push(withBasePath('/'))}>Create a New Vote</button>
       </div>
     )
   }
@@ -352,7 +353,7 @@ export default function VotePage() {
           </ol>
         </div>
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => router.push(`/v/${voteId}/results`)}>
+          <button onClick={() => router.push(withBasePath(`/v/${voteId}/results`))}>
             View Results
           </button>
           <button
@@ -563,7 +564,7 @@ export default function VotePage() {
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => router.push(`/v/${voteId}/results`)}
+            onClick={() => router.push(withBasePath(`/v/${voteId}/results`))}
           >
             View Results
           </button>
