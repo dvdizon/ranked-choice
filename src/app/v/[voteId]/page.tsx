@@ -151,7 +151,7 @@ export default function VotePage() {
   useEffect(() => {
     const lower = voteId.toLowerCase()
     if (voteId !== lower) {
-      router.replace(withBasePath(`/v/${lower}`))
+      router.replace(`/v/${lower}`)
     }
   }, [voteId, router])
 
@@ -330,7 +330,7 @@ export default function VotePage() {
       <div className="fade-in">
         <h1>Error</h1>
         <p className="error">{error}</p>
-        <button onClick={() => router.push(withBasePath('/'))}>Create a New Vote</button>
+        <button onClick={() => router.push('/')}>Create a New Vote</button>
       </div>
     )
   }
@@ -353,7 +353,7 @@ export default function VotePage() {
           </ol>
         </div>
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => router.push(withBasePath(`/v/${voteId}/results`))}>
+          <button onClick={() => router.push(`/v/${voteId}/results`)}>
             View Results
           </button>
           <button
@@ -564,7 +564,7 @@ export default function VotePage() {
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => router.push(withBasePath(`/v/${voteId}/results`))}
+            onClick={() => router.push(`/v/${voteId}/results`)}
           >
             View Results
           </button>

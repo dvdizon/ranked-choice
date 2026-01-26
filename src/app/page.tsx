@@ -164,7 +164,7 @@ export default function CreateVotePage() {
         </div>
 
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => router.push(withBasePath(createdVote.voteUrl))}>
+          <button onClick={() => router.push(createdVote.voteUrl)}>
             Go to Vote Page
           </button>
           <button

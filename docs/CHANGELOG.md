@@ -8,6 +8,9 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+### Fixed
+- **Duplicate Base Path in Client-Side Navigation** - Removed `withBasePath()` from `router.push()` and `router.replace()` calls to prevent double `/rcv/rcv` prefixing. Next.js automatically applies `basePath` from config to client-side navigation, so the helper is only needed for server-side API calls.
+
 ### Added
 - **Base Path Support**
   - Standardized `/rcv` deployment with `basePath` and shared `withBasePath()` helper

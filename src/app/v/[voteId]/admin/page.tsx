@@ -99,7 +99,7 @@ export default function AdminPage() {
       }
 
       alert('Vote deleted successfully')
-      router.push(withBasePath('/'))
+      router.push('/')
     } catch (err) {
       setError('Network error')
       setLoading(false)
@@ -312,7 +312,7 @@ export default function AdminPage() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => router.push(withBasePath(`/v/${voteId}`))}
+              onClick={() => router.push(`/v/${voteId}`)}
             >
               Back to Vote
             </button>
@@ -366,7 +366,7 @@ export default function AdminPage() {
           </button>
           <button
             className="btn-secondary"
-            onClick={() => router.push(withBasePath(`/v/${voteId}/results`))}
+            onClick={() => router.push(`/v/${voteId}/results`)}
           >
             View Results
           </button>
