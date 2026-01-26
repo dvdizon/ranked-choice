@@ -9,12 +9,35 @@ This document tracks work history, including what was implemented by AI agents a
 ## [Unreleased]
 
 ### Added
+- **Auto-Close Feature** - Schedule automatic vote closing
+  - Added `auto_close_at` column to votes table with migration support
+  - Date/time picker on vote creation form
+  - Automatic vote closing when deadline passes (checked on vote access)
+  - Display auto-close time on voting page
+  - Admin panel support for setting/changing auto-close time
+  - API support for auto-close parameter
+- **REST API Documentation** (`docs/API.md`)
+  - Comprehensive API docs for programmatic vote creation
+  - Examples for curl, Node.js, and automated workflows
+  - All endpoints documented with request/response formats
+- **API Key Management System**
+  - New `api_keys` table for tracking API keys
+  - Admin endpoint (`/api/admin/api-keys`) for creating/listing/deleting API keys
+  - Requires `ADMIN_SECRET` environment variable for admin access
+  - API key generation with `rcv_` prefix
+  - Last-used timestamp tracking (infrastructure for future rate limiting)
+- **Logo and Visual Branding**
+  - Added `public/logo.png` for site branding
+  - Logo displayed in header (responsive: 96px desktop, 80px mobile)
+  - Replaced text branding with image logo
+- **Persistent Options** - Vote creation form remembers last-used options in localStorage
 - **Admin Panel** (`src/app/v/[voteId]/admin/page.tsx`)
   - Authentication with write secret
   - View all ballots with voter names and timestamps
   - Delete individual ballots
   - Delete entire vote
   - Close/reopen voting
+  - Set/change auto-close date/time
   - Edit vote options (removes deleted options from existing ballots)
   - Admin URL provided on vote creation page
 - **Custom "Other" Options**
@@ -33,6 +56,18 @@ This document tracks work history, including what was implemented by AI agents a
 - `docs/archive/` - Archive directory for superseded documentation
 
 ### Changed
+- **Project rebranding** - "RCV Lunch Picker" → "Ranked Choice Voting App"
+  - Updated README with new branding and logo
+  - Emphasizes app is not lunch-specific
+  - More professional and general-purpose branding
+- **Visual branding** - Replaced text header with logo image
+  - Added `public/logo.png` for site branding
+  - Updated Header component to use Next.js Image component
+  - Responsive logo sizing (96px desktop, 80px mobile)
+- **Vote creation UX** - Options are now persisted in localStorage
+  - Last used options automatically load on page refresh
+  - Saves time for repeat vote creators
+  - Safe fallback if localStorage is unavailable
 - **Vote ID format** - Now allows dashes in addition to letters and numbers (e.g., `team-lunch`)
 - **Voting UX** - Changed from opt-in to opt-out behavior
   - All options now start pre-ranked in random order
@@ -43,10 +78,15 @@ This document tracks work history, including what was implemented by AI agents a
 - Archived `AI-SEED-PROMPT.md` to `docs/archive/` (original purpose fulfilled)
 
 ### Database Changes
+- Added `auto_close_at TEXT` column to `votes` table
+- Added `api_keys` table with columns: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
 - Added `voter_name TEXT NOT NULL` column to `ballots` table
 - Added `voter_names_required INTEGER NOT NULL DEFAULT 1` column to `votes` table
+- Added `setAutoCloseAt()` function for managing auto-close times
+- Added API key management functions: `createApiKey()`, `getApiKeyByHash()`, `getAllApiKeys()`, `updateApiKeyLastUsed()`, `deleteApiKey()`
 - Added `appendVoteOptions()` function for dynamic option addition
 - Database migrations handle existing data gracefully
+- Auto-close functionality integrated into `getVote()` - automatically closes votes when deadline passes
 
 ### CI/CD Pipeline Details
 The GitLab CI/CD pipeline includes:

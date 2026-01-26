@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import CopyButton from './components/CopyButton'
 
@@ -17,6 +17,8 @@ interface CreateVoteResponse {
   error?: string
 }
 
+const STORAGE_KEY = 'rcv-last-options'
+
 export default function CreateVotePage() {
   const router = useRouter()
   const [title, setTitle] = useState('')
@@ -24,10 +26,23 @@ export default function CreateVotePage() {
   const [customId, setCustomId] = useState('')
   const [customSecret, setCustomSecret] = useState('')
   const [voterNamesRequired, setVoterNamesRequired] = useState(true)
+  const [autoCloseAt, setAutoCloseAt] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [createdVote, setCreatedVote] = useState<CreateVoteResponse | null>(null)
+
+  // Load last used options from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedOptions = localStorage.getItem(STORAGE_KEY)
+      if (savedOptions) {
+        setOptionsText(savedOptions)
+      }
+    } catch (err) {
+      // Ignore localStorage errors (e.g., disabled cookies)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +70,7 @@ export default function CreateVotePage() {
           voteId: customId || undefined,
           writeSecret: customSecret || undefined,
           voterNamesRequired,
+          autoCloseAt: autoCloseAt || undefined,
         }),
       })
 
@@ -64,6 +80,13 @@ export default function CreateVotePage() {
         setError(data.error || 'Failed to create vote')
         setLoading(false)
         return
+      }
+
+      // Save options to localStorage for next time
+      try {
+        localStorage.setItem(STORAGE_KEY, optionsText)
+      } catch (err) {
+        // Ignore localStorage errors
       }
 
       setCreatedVote(data)
@@ -150,6 +173,7 @@ export default function CreateVotePage() {
               setCustomId('')
               setCustomSecret('')
               setVoterNamesRequired(true)
+              setAutoCloseAt('')
             }}
           >
             Create Another
@@ -204,6 +228,19 @@ export default function CreateVotePage() {
           <p className="muted">
             When enabled, voters must enter their name when submitting a ballot.
             When disabled, ballots are anonymous.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="autoCloseAt">Auto-close voting (optional)</label>
+          <input
+            type="datetime-local"
+            id="autoCloseAt"
+            value={autoCloseAt}
+            onChange={(e) => setAutoCloseAt(e.target.value)}
+          />
+          <p className="muted">
+            Automatically close voting at this date and time. Leave blank to keep voting open indefinitely.
           </p>
         </div>
 

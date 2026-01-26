@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getVote, countBallots, deleteVote, closeVote, reopenVote, updateVoteOptions } from '@/lib/db'
+import { getVote, countBallots, deleteVote, closeVote, reopenVote, updateVoteOptions, setAutoCloseAt } from '@/lib/db'
 import { canonicalizeVoteId, verifySecret } from '@/lib/auth'
 
 export async function GET(
@@ -32,6 +32,7 @@ export async function GET(
       options: vote.options,
       created_at: vote.created_at,
       closed_at: vote.closed_at,
+      auto_close_at: vote.auto_close_at,
       voter_names_required: vote.voter_names_required,
       ballotCount,
     })
@@ -112,7 +113,7 @@ export async function PATCH(
 
     // Verify write secret
     const body = await request.json()
-    const { writeSecret, action, options } = body
+    const { writeSecret, action, options, autoCloseAt } = body
 
     if (!writeSecret) {
       return NextResponse.json(
@@ -142,6 +143,26 @@ export async function PATCH(
         )
       }
       updateVoteOptions(voteId, options)
+    } else if (action === 'setAutoClose') {
+      // Validate autoCloseAt if provided
+      let validAutoCloseAt: string | null = null
+      if (autoCloseAt && typeof autoCloseAt === 'string' && autoCloseAt.trim().length > 0) {
+        const autoCloseDate = new Date(autoCloseAt)
+        if (isNaN(autoCloseDate.getTime())) {
+          return NextResponse.json(
+            { error: 'Invalid auto-close date format' },
+            { status: 400 }
+          )
+        }
+        if (autoCloseDate <= new Date()) {
+          return NextResponse.json(
+            { error: 'Auto-close date must be in the future' },
+            { status: 400 }
+          )
+        }
+        validAutoCloseAt = autoCloseDate.toISOString()
+      }
+      setAutoCloseAt(voteId, validAutoCloseAt)
     } else {
       return NextResponse.json(
         { error: 'Invalid action' },
@@ -161,6 +182,7 @@ export async function PATCH(
         options: updatedVote!.options,
         created_at: updatedVote!.created_at,
         closed_at: updatedVote!.closed_at,
+        auto_close_at: updatedVote!.auto_close_at,
         voter_names_required: updatedVote!.voter_names_required,
         ballotCount,
       },

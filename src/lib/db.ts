@@ -23,7 +23,8 @@ db.exec(`
     options TEXT NOT NULL,
     write_secret_hash TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now')),
-    closed_at TEXT
+    closed_at TEXT,
+    auto_close_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ballots (
@@ -35,7 +36,16 @@ db.exec(`
     FOREIGN KEY (vote_id) REFERENCES votes(id)
   );
 
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key_hash TEXT NOT NULL UNIQUE,
+    name TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    last_used_at TEXT
+  );
+
   CREATE INDEX IF NOT EXISTS idx_ballots_vote_id ON ballots(vote_id);
+  CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 `)
 
 // Migration: Add voter_name column if it doesn't exist
@@ -52,6 +62,13 @@ try {
   // Column already exists, ignore error
 }
 
+// Migration: Add auto_close_at column if it doesn't exist
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN auto_close_at TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
 export default db
 
 export interface Vote {
@@ -61,6 +78,7 @@ export interface Vote {
   write_secret_hash: string
   created_at: string
   closed_at: string | null
+  auto_close_at: string | null
   voter_names_required: boolean
 }
 
@@ -72,19 +90,28 @@ export interface Ballot {
   created_at: string
 }
 
+export interface ApiKey {
+  id: number
+  key_hash: string
+  name: string | null
+  created_at: string
+  last_used_at: string | null
+}
+
 // Vote operations
 export function createVote(
   id: string,
   title: string,
   options: string[],
   writeSecretHash: string,
-  voterNamesRequired: boolean = true
+  voterNamesRequired: boolean = true,
+  autoCloseAt: string | null = null
 ): Vote {
   const stmt = db.prepare(`
-    INSERT INTO votes (id, title, options, write_secret_hash, voter_names_required)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO votes (id, title, options, write_secret_hash, voter_names_required, auto_close_at)
+    VALUES (?, ?, ?, ?, ?, ?)
   `)
-  stmt.run(id, title, JSON.stringify(options), writeSecretHash, voterNamesRequired ? 1 : 0)
+  stmt.run(id, title, JSON.stringify(options), writeSecretHash, voterNamesRequired ? 1 : 0, autoCloseAt)
   return getVote(id)!
 }
 
@@ -92,11 +119,24 @@ export function getVote(id: string): Vote | null {
   const stmt = db.prepare('SELECT * FROM votes WHERE id = ?')
   const row = stmt.get(id) as any
   if (!row) return null
-  return {
+
+  const vote: Vote = {
     ...row,
     options: JSON.parse(row.options),
     voter_names_required: Boolean(row.voter_names_required),
   }
+
+  // Auto-close vote if auto_close_at has passed and vote is not already closed
+  if (vote.auto_close_at && !vote.closed_at) {
+    const now = new Date()
+    const autoCloseDate = new Date(vote.auto_close_at)
+    if (now >= autoCloseDate) {
+      closeVote(id)
+      vote.closed_at = new Date().toISOString()
+    }
+  }
+
+  return vote
 }
 
 export function voteExists(id: string): boolean {
@@ -199,4 +239,44 @@ export function appendVoteOptions(id: string, newOptions: string[]): void {
   const updatedOptions = [...vote.options, ...uniqueNewOptions]
   const updateStmt = db.prepare('UPDATE votes SET options = ? WHERE id = ?')
   updateStmt.run(JSON.stringify(updatedOptions), id)
+}
+
+export function setAutoCloseAt(id: string, autoCloseAt: string | null): void {
+  const stmt = db.prepare('UPDATE votes SET auto_close_at = ? WHERE id = ?')
+  stmt.run(autoCloseAt, id)
+}
+
+// API Key operations
+export function createApiKey(keyHash: string, name: string | null = null): ApiKey {
+  const stmt = db.prepare(`
+    INSERT INTO api_keys (key_hash, name)
+    VALUES (?, ?)
+  `)
+  const result = stmt.run(keyHash, name)
+  return getApiKeyById(result.lastInsertRowid as number)!
+}
+
+export function getApiKeyById(id: number): ApiKey | null {
+  const stmt = db.prepare('SELECT * FROM api_keys WHERE id = ?')
+  return stmt.get(id) as ApiKey | null
+}
+
+export function getApiKeyByHash(keyHash: string): ApiKey | null {
+  const stmt = db.prepare('SELECT * FROM api_keys WHERE key_hash = ?')
+  return stmt.get(keyHash) as ApiKey | null
+}
+
+export function getAllApiKeys(): ApiKey[] {
+  const stmt = db.prepare('SELECT * FROM api_keys ORDER BY created_at DESC')
+  return stmt.all() as ApiKey[]
+}
+
+export function updateApiKeyLastUsed(id: number): void {
+  const stmt = db.prepare("UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?")
+  stmt.run(id)
+}
+
+export function deleteApiKey(id: number): void {
+  const stmt = db.prepare('DELETE FROM api_keys WHERE id = ?')
+  stmt.run(id)
 }

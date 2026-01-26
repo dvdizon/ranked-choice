@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidelines for AI agents and contributors working on the RCV Lunch Picker project.
+Guidelines for AI agents and contributors working on the Ranked Choice Voting App project.
 
 ## Project Overview
 
@@ -44,14 +44,17 @@ src/
 │   │   ├── page.tsx       # Voting page (opt-out UX, custom options)
 │   │   ├── results/       # Results with voter names
 │   │   └── admin/         # Admin panel
-│   └── api/votes/         # REST API endpoints
-│       ├── route.ts       # Create vote
-│       └── [voteId]/
-│           ├── route.ts   # GET/DELETE/PATCH vote
-│           ├── ballots/   # Submit/view ballots
-│           │   ├── route.ts
-│           │   └── [ballotId]/route.ts  # Delete ballot
-│           └── results/route.ts
+│   └── api/               # REST API endpoints
+│       ├── admin/
+│       │   └── api-keys/route.ts  # API key management (admin only)
+│       └── votes/
+│           ├── route.ts       # Create vote
+│           └── [voteId]/
+│               ├── route.ts   # GET/DELETE/PATCH vote
+│               ├── ballots/   # Submit/view ballots
+│               │   ├── route.ts
+│               │   └── [ballotId]/route.ts  # Delete ballot
+│               └── results/route.ts
 └── lib/
     ├── db.ts              # SQLite database layer
     ├── irv.ts             # Pure IRV algorithm
@@ -92,16 +95,19 @@ This ensures all documentation stays synchronized with code and future agents/co
 - Local dev path: `./data/rcv.sqlite`
 
 #### Schema
-- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voter_names_required` (INTEGER, default 1), `created_at`, `closed_at`
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`
 - **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
+- **api_keys table**: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
 
 #### Key Functions
 - Vote CRUD: `createVote`, `getVote`, `deleteVote`, `voteExists`
-- Vote management: `closeVote`, `reopenVote`, `updateVoteOptions`, `appendVoteOptions`
+- Vote management: `closeVote`, `reopenVote`, `updateVoteOptions`, `appendVoteOptions`, `setAutoCloseAt`
 - Ballot operations: `createBallot`, `getBallot`, `getBallotsByVoteId`, `deleteBallot`, `countBallots`
+- API key operations: `createApiKey`, `getApiKeyById`, `getApiKeyByHash`, `getAllApiKeys`, `updateApiKeyLastUsed`, `deleteApiKey`
 
 ### API Routes
-- REST endpoints under `/api/votes/`
+- REST endpoints under `/api/votes/` - See `docs/API.md` for comprehensive API documentation
+- Admin endpoints under `/api/admin/` - Requires `ADMIN_SECRET` environment variable
 - JSON request/response bodies
 - Write operations require vote secret
 
@@ -112,7 +118,7 @@ This ensures all documentation stays synchronized with code and future agents/co
 PORT=3100                              # Required
 DATABASE_PATH=/var/lib/rcv-lunch/rcv.sqlite  # Production
 BASE_URL=https://your-domain.com       # Optional
-VOTE_WRITE_SECRET=                     # Optional HMAC secret
+ADMIN_SECRET=                          # Optional - enables admin API endpoints for API key management
 ```
 
 ### Production Checklist
@@ -140,6 +146,7 @@ See `.gitlab-ci.yml` for configuration.
 |------|---------|
 | `PLAN.md` | Source of truth for requirements and RCV rules |
 | `CLAUDE.md` | This file - development guidelines |
+| `docs/API.md` | REST API documentation for programmatic access |
 | `docs/refactor-opportunities.md` | Deferred improvements |
 | `docs/CHANGELOG.md` | Work history and changes |
 
@@ -149,14 +156,22 @@ See `.gitlab-ci.yml` for configuration.
 - **Opt-out UX**: All options start ranked in random order; voters remove unwanted options
 - **Custom Options**: Voters can suggest new options (added dynamically for all voters)
 - **Optional Voter Names**: Vote creators choose whether names are required (default) or optional; enables both coordinated and anonymous voting
+- **Auto-Close**: Set automatic voting deadline with date/time picker
 - **Drag & Drop**: Reorder rankings with touch/mouse support (@dnd-kit)
+- **Persistent Options**: Vote creator's last-used options saved in localStorage
 
 ### Admin Capabilities
 - **Admin Panel** (`/v/:voteId/admin`): Write-secret protected management interface
   - View all ballots with voter names and timestamps
   - Delete individual ballots or entire vote
   - Close/reopen voting (prevents new submissions when closed)
+  - Set or change auto-close date/time
   - Edit vote options (removes deleted options from existing ballots)
+- **API Key Management** (`/api/admin/api-keys`): Admin-secret protected endpoints
+  - Create API keys for programmatic access
+  - List all API keys with usage timestamps
+  - Delete API keys
+  - Infrastructure for future rate limiting
 
 ### Vote ID Format
 - Alphanumeric characters and dashes allowed (e.g., `friday-lunch`)
