@@ -4,23 +4,45 @@ const normalizedBasePath = rawBasePath.endsWith('/')
   : rawBasePath
 
 const isAbsoluteUrl = (path: string) => /^https?:\/\//i.test(path)
+const dedupeBasePathPrefix = (path: string) => {
+  if (!normalizedBasePath) {
+    return path
+  }
+
+  const doublePrefix = `${normalizedBasePath}${normalizedBasePath}`
+  let normalizedPath = path
+
+  while (
+    normalizedPath === doublePrefix ||
+    normalizedPath.startsWith(`${doublePrefix}/`)
+  ) {
+    normalizedPath = normalizedPath.replace(doublePrefix, normalizedBasePath)
+  }
+
+  return normalizedPath
+}
 
 export const withBasePath = (path: string) => {
   if (!path || isAbsoluteUrl(path)) {
     return path
   }
 
+  const normalizedPath = dedupeBasePathPrefix(path)
+
   if (!normalizedBasePath) {
-    return path
+    return normalizedPath
   }
 
-  if (path === normalizedBasePath || path.startsWith(`${normalizedBasePath}/`)) {
-    return path
+  if (
+    normalizedPath === normalizedBasePath ||
+    normalizedPath.startsWith(`${normalizedBasePath}/`)
+  ) {
+    return normalizedPath
   }
 
-  if (path === '/') {
+  if (normalizedPath === '/') {
     return normalizedBasePath
   }
 
-  return `${normalizedBasePath}${path.startsWith('/') ? '' : '/'}${path}`
+  return `${normalizedBasePath}${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath}`
 }

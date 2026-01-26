@@ -78,6 +78,9 @@ This document tracks work history, including what was implemented by AI agents a
   - Voters remove unwanted options instead of adding desired ones
   - Reduces cognitive load and prevents ballot exhaustion
 - **Generic branding** - Replaced "Friday Lunch" example text with "Team Lunch Decision" to emphasize app is not lunch-specific
+
+### Fixed
+- **Base path duplication** - Normalized `withBasePath()` to prevent `/rcv/rcv` links in client navigation and shared URLs
 - **Cross-platform compatibility** - Fixed `package.json` scripts to use hardcoded port 3100 instead of bash variable expansion
 - Archived `AI-SEED-PROMPT.md` to `docs/archive/` (original purpose fulfilled)
 
