@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+      - run: npm ci --prefer-offline
+      - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+      - run: npm ci --prefer-offline
+      - run: npx tsc --noEmit
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+      - run: npm ci --prefer-offline
+      - run: npm test -- --coverage --ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+      - run: npm ci --prefer-offline
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next/
+            public/
+
+  deploy_production:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    environment:
+      name: production
+      url: https://${{ secrets.DEPLOY_HOST }}
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      PM2_PROCESS_NAME: ${{ secrets.PM2_PROCESS_NAME || 'rcv-lunch' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SSH dependencies
+        run: sudo apt-get update && sudo apt-get install -y openssh-client rsync
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$DEPLOY_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+      - name: Deploy
+        run: |
+          echo "=========================================="
+          echo "Deploying to production..."
+          echo "Host: $DEPLOY_HOST"
+          echo "Path: $DEPLOY_PATH"
+          echo "=========================================="
+
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude 'data' \
+            --exclude '.env' \
+            --exclude 'coverage' \
+            -e "ssh -i ~/.ssh/deploy_key -p $DEPLOY_PORT" \
+            ./ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+
+          ssh -i ~/.ssh/deploy_key -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST << EOF
+            cd $DEPLOY_PATH
+            npm ci --production
+            npm run build
+            pm2 reload $PM2_PROCESS_NAME || pm2 start deploy/pm2/ecosystem.config.cjs
+            pm2 save
+          EOF
+
+          echo "Deployment complete!"

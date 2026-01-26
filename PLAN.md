@@ -285,6 +285,7 @@ All meaningful behavior changes must be logged here.
 - 2026-01-25 — Allowed dashes in vote IDs (e.g., team-lunch)
 - 2026-01-26 — Standardized base path handling for `/rcv` deployments (links, API calls, redirects)
 - 2026-01-26 — Deduplicated base path prefixes in internal navigation links
+- 2026-01-26 — Added GitHub Actions CI workflow mirroring lint, typecheck, test, build, and manual deploy
 - 2026-01-24 — Initial plan created
 
 ---
@@ -730,3 +731,4 @@ Implement Option B - normalize repeated base path prefixes in `withBasePath()`.
 - The helper remains the single source of truth for base path handling.
 
 ---
+

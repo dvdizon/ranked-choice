@@ -59,6 +59,7 @@ This document tracks work history, including what was implemented by AI agents a
   - Enables both coordinated (named) and anonymous voting use cases
 - `CLAUDE.md` - Best practices and development guidelines for AI agents and contributors
 - `.gitlab-ci.yml` - GitLab CI/CD pipeline with lint, test, build, and deploy stages
+- `.github/workflows/ci.yml` - GitHub Actions workflow mirroring lint, typecheck, test, build, and manual deploy
 - `docs/CHANGELOG.md` - This file documenting work history
 - `docs/archive/` - Archive directory for superseded documentation
 
@@ -99,17 +100,22 @@ This document tracks work history, including what was implemented by AI agents a
 - Auto-close functionality integrated into `getVote()` - automatically closes votes when deadline passes
 
 ### CI/CD Pipeline Details
-The GitLab CI/CD pipeline includes:
-- **validate stage**: ESLint + TypeScript type checking
-- **test stage**: Jest unit tests with coverage reporting
-- **build stage**: Next.js production build
-- **deploy stage**: SSH-based deployment (requires secrets configuration)
+The GitHub Actions workflow (`.github/workflows/ci.yml`) includes:
+- **lint job**: ESLint checks
+- **typecheck job**: TypeScript type checking
+- **test job**: Jest unit tests with coverage reporting
+- **build job**: Next.js production build
+- **deploy_production job**: SSH-based deployment (manual trigger)
+
+GitLab CI/CD configuration remains available in `.gitlab-ci.yml` if needed.
 
 Deployment is currently set to manual trigger with placeholders for:
 - `DEPLOY_HOST` - Server hostname
 - `DEPLOY_USER` - SSH username
-- `DEPLOY_SSH_KEY` - SSH private key (file type)
+- `DEPLOY_SSH_KEY` - SSH private key
 - `DEPLOY_PATH` - Application directory on server
+- `DEPLOY_PORT` - SSH port (optional, default: 22)
+- `PM2_PROCESS_NAME` - pm2 process name (optional, default: rcv-lunch)
 
 ---
 
@@ -180,3 +186,7 @@ This project uses semantic versioning:
 - **Human**: David (project owner, planning, decisions)
 - **AI Agent**: Initial MVP implementation (Phases 1-3)
 - **AI Agent**: Repository cleanup and CI/CD setup (current)
+
+
+
+
