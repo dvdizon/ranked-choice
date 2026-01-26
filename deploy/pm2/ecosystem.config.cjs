@@ -1,5 +1,5 @@
 /**
- * PM2 Ecosystem Configuration for RCV Lunch Picker
+ * PM2 Ecosystem Configuration for Ranked Choice Voting App
  *
  * Process name: rcv-lunch
  * Port: 3100 (default)

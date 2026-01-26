@@ -1,6 +1,6 @@
-# Deployment Guide for RCV Lunch Picker
+# Deployment Guide for Ranked Choice Voting App
 
-This guide covers deploying the RCV Lunch Picker app to a DigitalOcean droplet (or similar VPS) running nginx and pm2.
+This guide covers deploying the Ranked Choice Voting App to a DigitalOcean droplet (or similar VPS) running nginx and pm2.
 
 ## Prerequisites
 

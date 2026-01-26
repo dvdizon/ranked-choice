@@ -8,7 +8,7 @@
 
 # Original AI Seed Prompt
 
-Implement the "RCV Lunch Picker" app described in PLAN.md.
+Implement the "Ranked Choice Voting App" described in PLAN.md.
 
 Hard rules (must follow)
 - Make changes additive and isolated. Do NOT overwrite existing deployment paths, nginx sites, or scripts used by other apps in this repo.
