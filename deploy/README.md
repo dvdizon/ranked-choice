@@ -102,6 +102,10 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+Assumption: This deployment serves the app under `/rcv`. Ensure `basePath: '/rcv'`
+is set in `next.config.js` before building, or Nginx will serve broken asset
+paths under `/rcv`.
+
 ### 7. Set Up HTTPS (Recommended)
 
 ```bash
