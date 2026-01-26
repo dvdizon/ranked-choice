@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the RCV Lunch Picker project.
+All notable changes to the Ranked Choice Voting App project.
 
 This document tracks work history, including what was implemented by AI agents and humans.
 
@@ -56,7 +56,7 @@ This document tracks work history, including what was implemented by AI agents a
 - `docs/archive/` - Archive directory for superseded documentation
 
 ### Changed
-- **Project rebranding** - "RCV Lunch Picker" → "Ranked Choice Voting App"
+- **Project rebranding** - App renamed to Ranked Choice Voting App
   - Updated README with new branding and logo
   - Emphasizes app is not lunch-specific
   - More professional and general-purpose branding

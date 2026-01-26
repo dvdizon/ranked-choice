@@ -1,5 +1,5 @@
 # PLAN.md  
-**Project:** RCV Lunch Picker  
+**Project:** Ranked Choice Voting App  
 **Status:** 🟡 Planning  
 **Owner:** David  
 **Audience:** Friends & contributors  
@@ -59,6 +59,7 @@ These rules apply to *all* implementation decisions:
   - User enters options (e.g., restaurants)
   - Optional write secret (passcode)
   - Toggle to require voter names (default: required, can disable for anonymous voting)
+  - Optional auto-close date/time (deadline)
   - Receives admin URL for vote management
 
 - **Vote**
@@ -86,6 +87,7 @@ These rules apply to *all* implementation decisions:
   - View all ballots with voter details
   - Delete individual ballots or entire vote
   - Close/reopen voting
+  - Set/change auto-close date/time
   - Edit vote options
 
 ---
@@ -269,6 +271,11 @@ Decisions will be recorded below.
 
 All meaningful behavior changes must be logged here.
 
+- 2026-01-25 — Added auto-close voting deadlines (create + admin control)
+- 2026-01-25 — Added admin API key management (ADMIN_SECRET protected)
+- 2026-01-25 — Added REST API documentation for programmatic access
+- 2026-01-25 — Added logo branding and header image
+- 2026-01-25 — Persisted last-used vote options in localStorage
 - 2026-01-25 — Made voter names optional (creator decides) - Supersedes DR-2026-01-25-01, See DR-2026-01-25-05
 - 2026-01-25 — Replaced "Friday Lunch" with generic examples (not lunch-specific)
 - 2026-01-25 — Added voter names (non-anonymous ballots) - Superseded by DR-2026-01-25-05
@@ -558,3 +565,86 @@ Implement Option B - Vote creators decide whether names are required.
 
 ---
 
+
+### DR-2026-01-25-06: Auto-Close Voting Deadlines
+
+**Decision ID:** DR-2026-01-25-06
+**Status:** Accepted
+**Date:** 2026-01-25
+**Deciders:** User (David)
+
+#### Context
+Vote creators wanted a way to set a deadline so voting ends automatically without requiring manual admin action.
+
+#### Options Considered
+- **Option A: Manual close only**
+  - Admin must close votes when finished
+  - Requires active management
+- **Option B: Optional auto-close date/time**
+  - Creator sets a deadline during creation or in admin panel
+  - Vote closes automatically when deadline passes
+
+#### Decision
+Implement Option B - Optional auto-close date/time per vote.
+
+#### Rationale
+- Reduces ongoing admin burden
+- Prevents votes from being left open accidentally
+- Fits common use case of time-boxed decisions
+- Keeps manual close available when needed
+
+#### Consequences
+- Added `auto_close_at` column to `votes`
+- Vote creation supports an optional auto-close input
+- Admin panel can set/change/remove auto-close time
+- Vote auto-closes when deadline passes (checked on access)
+- API supports `autoCloseAt` and `setAutoClose`
+
+#### Scope
+- [x] UX / product behavior
+- [x] Data model
+
+---
+
+### DR-2026-01-25-07: Admin API Keys for Programmatic Access
+
+**Decision ID:** DR-2026-01-25-07
+**Status:** Accepted
+**Date:** 2026-01-25
+**Deciders:** User (David)
+
+#### Context
+There is a need for programmatic vote creation and future rate limiting, which requires a way to track API clients securely.
+
+#### Options Considered
+- **Option A: No API keys**
+  - Keep endpoints open without tracking
+  - Harder to rate-limit or audit usage
+- **Option B: Admin-managed API keys**
+  - Admin can create/list/delete keys
+  - Keys stored hashed for security
+  - Establishes infrastructure for future rate limiting
+
+#### Decision
+Implement Option B - Admin-managed API keys with secure storage.
+
+#### Rationale
+- Enables programmatic access without user accounts
+- Prepares for rate limiting and auditing
+- Keeps management simple via admin secret
+- Avoids exposing raw keys in storage
+
+#### Consequences
+- Added `api_keys` table with hashed keys and usage timestamps
+- New admin endpoint `/api/admin/api-keys` protected by `ADMIN_SECRET`
+- API key generation with `rcv_` prefix and secure hashing
+- REST API documentation added for programmatic access
+
+#### Scope
+- [x] Security / abuse prevention
+- [x] Data model
+
+#### Notes
+- API keys are managed for now; enforcement may be added later
+
+---

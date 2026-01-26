@@ -3,8 +3,8 @@ import './globals.css'
 import Header from './components/Header'
 
 export const metadata: Metadata = {
-  title: 'RCV Lunch Picker',
-  description: 'Ranked Choice Voting for deciding where to eat',
+  title: 'Ranked Choice Voting App',
+  description: 'Ranked Choice Voting for group decisions',
 }
 
 export default function RootLayout({

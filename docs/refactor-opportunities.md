@@ -130,7 +130,7 @@ Add rate limiting to:
 - Prevent ballot spam
 - Prevent vote creation spam
 
-**Why not now**: The write secret prevents unauthorized ballots; for friends-only use, this is sufficient.
+**Why not now**: API keys now exist for tracking, but enforcement and limits are not implemented yet; for friends-only use, this is sufficient.
 
 ### 17. CSRF Protection
 Add CSRF tokens to forms.
@@ -232,6 +232,8 @@ The following items were previously in this list and have been implemented:
 - **Vote Closing/Locking (partial)** (Features #4) - Auto-close scheduling and manual close/reopen in admin panel
 - **API Documentation** - Comprehensive REST API docs for programmatic vote creation (`docs/API.md`)
 - **API Key Management** - Admin endpoints for creating and managing API keys (infrastructure for future rate limiting)
+- **Branding & Logo** - Added header logo and updated documentation branding
+- **Persistent Vote Options** - Save last-used options in localStorage on the create vote page
 - **Touch-Optimized Drag and Drop** (UX #9) - Implemented using `@dnd-kit/core` with proper touch/pointer sensors
 - **Copy-to-Clipboard for Links/Secret** (UX #10) - Added copy buttons for secret and URLs on vote creation
 - **Dark Mode** (UX #11) - Added theme toggle with system preference detection and persistence
