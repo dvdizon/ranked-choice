@@ -39,7 +39,7 @@ It uses **Instant-Runoff Voting (IRV)**:
 ```bash
 # Clone the repo
 git clone <repo-url>
-cd rcv-lunch
+cd ranked-choice
 
 # Install dependencies
 npm install
