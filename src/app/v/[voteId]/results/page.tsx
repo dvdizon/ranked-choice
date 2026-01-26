@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { withBasePath } from '@/lib/paths'
 
 interface RoundResult {
   round: number
@@ -52,7 +53,7 @@ export default function ResultsPage() {
   useEffect(() => {
     const lower = voteId.toLowerCase()
     if (voteId !== lower) {
-      router.replace(`/v/${lower}/results`)
+      router.replace(withBasePath(`/v/${lower}/results`))
     }
   }, [voteId, router])
 
@@ -62,7 +63,7 @@ export default function ResultsPage() {
 
     const fetchResults = async () => {
       try {
-        const res = await fetch(`/api/votes/${voteId}/results`)
+        const res = await fetch(withBasePath(`/api/votes/${voteId}/results`))
         if (!res.ok) {
           if (res.status === 404) {
             setError('Vote not found')
@@ -86,7 +87,7 @@ export default function ResultsPage() {
   const refresh = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/votes/${voteId}/results`)
+      const res = await fetch(withBasePath(`/api/votes/${voteId}/results`))
       if (res.ok) {
         const data = await res.json()
         setData(data)
@@ -117,7 +118,7 @@ export default function ResultsPage() {
       <div className="fade-in">
         <h1>Error</h1>
         <p className="error">{error}</p>
-        <button onClick={() => router.push('/')}>Create a New Vote</button>
+        <button onClick={() => router.push(withBasePath('/'))}>Create a New Vote</button>
       </div>
     )
   }
@@ -269,13 +270,13 @@ export default function ResultsPage() {
         </button>
         <button
           className="btn-secondary"
-          onClick={() => router.push(`/v/${voteId}`)}
+          onClick={() => router.push(withBasePath(`/v/${voteId}`))}
         >
           Submit a Ballot
         </button>
         <button
           className="btn-secondary"
-          onClick={() => router.push('/')}
+          onClick={() => router.push(withBasePath('/'))}
         >
           Create New Vote
         </button>

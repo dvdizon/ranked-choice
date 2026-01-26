@@ -283,6 +283,7 @@ All meaningful behavior changes must be logged here.
 - 2026-01-25 — Added dynamic "Other" options - See DR-2026-01-25-03
 - 2026-01-25 — Added admin panel with full vote management - See DR-2026-01-25-04
 - 2026-01-25 — Allowed dashes in vote IDs (e.g., team-lunch)
+- 2026-01-26 — Standardized base path handling for `/rcv` deployments (links, API calls, redirects)
 - 2026-01-24 — Initial plan created
 
 ---
@@ -646,5 +647,45 @@ Implement Option B - Admin-managed API keys with secure storage.
 
 #### Notes
 - API keys are managed for now; enforcement may be added later
+
+---
+
+### DR-2026-01-26-01: Serve the App Under `/rcv` When Sharing a Domain
+
+**Decision ID:** DR-2026-01-26-01
+**Status:** Accepted
+**Date:** 2026-01-26
+**Deciders:** User (David)
+
+#### Context
+The app is hosted alongside other services on the same domain, so it needs a
+stable subpath to avoid conflicts and broken assets.
+
+#### Options Considered
+- **Option A: Serve at the domain root**
+  - Simplifies routing but conflicts with existing root redirects
+- **Option B: Serve under `/rcv` with a base path**
+  - Keeps other root behavior intact
+  - Requires basePath-aware links and API calls
+
+#### Decision
+Implement Option B - serve the app under `/rcv` and normalize internal paths.
+
+#### Rationale
+- Preserves existing root redirect behavior
+- Keeps nginx isolation consistent with other apps
+- Makes asset and API URLs predictable under a shared domain
+
+#### Consequences
+- `next.config.js` sets `basePath: '/rcv'`
+- Internal navigation uses `withBasePath()` helper
+- API docs and deployment instructions note the `/rcv` prefix
+
+#### Scope
+- [x] Deployment / ops
+- [x] UX / product behavior
+
+#### Notes
+- If deployment changes to root hosting, remove the basePath and helper usage.
 
 ---

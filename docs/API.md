@@ -8,6 +8,9 @@ When running locally: `http://localhost:3100`
 
 In production: `https://your-domain.com`
 
+If the app is deployed under a subpath (for example `/rcv`), prefix all
+routes below with that base path (e.g., `/rcv/api/votes`).
+
 ## Authentication
 
 ### Vote Operations

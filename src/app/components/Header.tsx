@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import ThemeToggle from './ThemeToggle'
 
 export default function Header() {
@@ -8,7 +9,7 @@ export default function Header() {
 
   return (
     <header className="header">
-      <a href="/" className="logo-link">
+      <Link href="/" className="logo-link">
         <Image
           src={`${basePath}/logo.png`}
           alt="RCV App"
@@ -17,7 +18,7 @@ export default function Header() {
           className="logo-image"
           priority
         />
-      </a>
+      </Link>
       <ThemeToggle />
     </header>
   )

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import CopyButton from './components/CopyButton'
+import { withBasePath } from '@/lib/paths'
 
 interface CreateVoteResponse {
   success: boolean
@@ -61,7 +62,7 @@ export default function CreateVotePage() {
     }
 
     try {
-      const res = await fetch('/api/votes', {
+      const res = await fetch(withBasePath('/api/votes'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,15 +100,17 @@ export default function CreateVotePage() {
 
   const getFullUrl = (path: string) => {
     if (typeof window !== 'undefined') {
-      return `${window.location.origin}${path}`
+      return `${window.location.origin}${withBasePath(path)}`
     }
-    return path
+    return withBasePath(path)
   }
 
   if (createdVote) {
-    const voteFullUrl = getFullUrl(createdVote.voteUrl)
-    const resultsFullUrl = getFullUrl(createdVote.resultsUrl)
-    const adminUrl = `/v/${createdVote.vote.id}/admin`
+    const votePath = withBasePath(createdVote.voteUrl)
+    const resultsPath = withBasePath(createdVote.resultsUrl)
+    const adminUrl = withBasePath(`/v/${createdVote.vote.id}/admin`)
+    const voteFullUrl = getFullUrl(votePath)
+    const resultsFullUrl = getFullUrl(resultsPath)
     const adminFullUrl = getFullUrl(adminUrl)
 
     return (
@@ -137,14 +140,14 @@ export default function CreateVotePage() {
           <div style={{ marginBottom: '0.75rem' }}>
             <p><strong>Vote page:</strong></p>
             <div className="copyable-field">
-              <a href={createdVote.voteUrl} className="link-text">{voteFullUrl}</a>
+              <a href={votePath} className="link-text">{voteFullUrl}</a>
               <CopyButton text={voteFullUrl} label="Copy vote URL" />
             </div>
           </div>
           <div style={{ marginBottom: '0.75rem' }}>
             <p><strong>Results page:</strong></p>
             <div className="copyable-field">
-              <a href={createdVote.resultsUrl} className="link-text">{resultsFullUrl}</a>
+              <a href={resultsPath} className="link-text">{resultsFullUrl}</a>
               <CopyButton text={resultsFullUrl} label="Copy results URL" />
             </div>
           </div>
@@ -161,7 +164,7 @@ export default function CreateVotePage() {
         </div>
 
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => router.push(createdVote.voteUrl)}>
+          <button onClick={() => router.push(withBasePath(createdVote.voteUrl))}>
             Go to Vote Page
           </button>
           <button
