@@ -401,7 +401,7 @@ export default function VotePage() {
         <div style={{ marginBottom: '1.5rem' }}>
           <h2>Your Rankings</h2>
           <p className="muted" style={{ marginBottom: '0.5rem' }}>
-            Drag to reorder or click × to remove options you don't want. Your top choice should be #1.
+            Drag to reorder or click × to remove options you don&apos;t want. Your top choice should be #1.
           </p>
 
           <DndContext

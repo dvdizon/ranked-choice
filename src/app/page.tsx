@@ -127,7 +127,7 @@ export default function CreateVotePage() {
           </div>
           <p className="muted" style={{ marginTop: '0.5rem' }}>
             Share this secret with voters so they can submit ballots.
-            You'll also need this to access the admin panel.
+            You&apos;ll also need this to access the admin panel.
             This will only be shown once.
           </p>
         </div>
