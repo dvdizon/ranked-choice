@@ -9,6 +9,9 @@ const nanoidAlphanumeric = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789'
 // Generate secrets (more characters, mixed case for security)
 const nanoidSecret = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789', 16)
 
+// Generate API keys (longer, more secure)
+const nanoidApiKey = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789', 32)
+
 /**
  * Generate a unique vote ID (lowercase alphanumeric)
  */
@@ -49,4 +52,25 @@ export function isValidVoteId(id: string): boolean {
  */
 export function canonicalizeVoteId(id: string): string {
   return id.toLowerCase()
+}
+
+/**
+ * Generate an API key for programmatic access
+ */
+export function generateApiKey(): string {
+  return `rcv_${nanoidApiKey()}`
+}
+
+/**
+ * Hash an API key for storage
+ */
+export async function hashApiKey(apiKey: string): Promise<string> {
+  return bcrypt.hash(apiKey, SALT_ROUNDS)
+}
+
+/**
+ * Verify an API key against its hash
+ */
+export async function verifyApiKey(apiKey: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(apiKey, hash)
 }

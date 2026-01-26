@@ -29,6 +29,7 @@ interface Vote {
   options: string[]
   ballotCount: number
   closed_at: string | null
+  auto_close_at: string | null
   voter_names_required: boolean
 }
 
@@ -384,6 +385,14 @@ export default function VotePage() {
         <div className="card" style={{ backgroundColor: 'rgba(255, 0, 0, 0.05)', marginBottom: '1.5rem' }}>
           <p style={{ color: 'var(--error)', margin: 0 }}>
             <strong>Voting is closed.</strong> This poll is no longer accepting new ballots.
+          </p>
+        </div>
+      )}
+
+      {!vote.closed_at && vote.auto_close_at && (
+        <div className="card" style={{ backgroundColor: 'rgba(255, 193, 7, 0.1)', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--muted)', margin: 0 }}>
+            <strong>Voting closes:</strong> {new Date(vote.auto_close_at).toLocaleString()}
           </p>
         </div>
       )}

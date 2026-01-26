@@ -60,16 +60,27 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
-.logo {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--fg);
+.logo-link {
+  display: block;
+  line-height: 0;
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
-.logo:hover {
-  color: var(--accent);
+.logo-link:hover {
+  opacity: 0.8;
+}
+
+.logo-image {
+  width: auto;
+  height: 96px;
+  object-fit: contain;
+}
+
+@media (max-width: 480px) {
+  .logo-image {
+    height: 80px;
+  }
 }
 
 /* Theme Toggle */
@@ -115,6 +126,7 @@ label {
 
 input[type="text"],
 input[type="password"],
+input[type="datetime-local"],
 textarea {
   width: 100%;
   padding: 0.5rem;
@@ -124,6 +136,15 @@ textarea {
   background: var(--bg-secondary);
   color: var(--fg);
   transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+  cursor: pointer;
+}
+
+[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
 input:focus,

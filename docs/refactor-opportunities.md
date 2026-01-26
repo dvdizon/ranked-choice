@@ -30,13 +30,13 @@ Would provide:
 
 ## Features
 
-### 4. Vote Closing/Locking
+### 4. Vote Closing/Locking (PARTIALLY IMPLEMENTED)
 Allow vote creators to:
-- Close voting to prevent new ballots
-- Lock options after first ballot
-- Set expiration time
+- ✅ Close voting to prevent new ballots (admin panel)
+- ❌ Lock options after first ballot
+- ✅ Set expiration time (auto-close feature)
 
-**Why not now**: Adds complexity; friends can coordinate manually.
+**Status**: Auto-close and manual close/reopen implemented. Option locking after first ballot remains unimplemented.
 
 ### 5. Voter Identity / Ballot Editing
 Allow voters to:
@@ -229,6 +229,9 @@ Reduce JavaScript bundle size:
 
 The following items were previously in this list and have been implemented:
 
+- **Vote Closing/Locking (partial)** (Features #4) - Auto-close scheduling and manual close/reopen in admin panel
+- **API Documentation** - Comprehensive REST API docs for programmatic vote creation (`docs/API.md`)
+- **API Key Management** - Admin endpoints for creating and managing API keys (infrastructure for future rate limiting)
 - **Touch-Optimized Drag and Drop** (UX #9) - Implemented using `@dnd-kit/core` with proper touch/pointer sensors
 - **Copy-to-Clipboard for Links/Secret** (UX #10) - Added copy buttons for secret and URLs on vote creation
 - **Dark Mode** (UX #11) - Added theme toggle with system preference detection and persistence

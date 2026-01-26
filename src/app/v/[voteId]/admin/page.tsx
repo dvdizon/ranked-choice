@@ -9,6 +9,7 @@ interface Vote {
   options: string[]
   created_at: string
   closed_at: string | null
+  auto_close_at: string | null
   ballotCount: number
 }
 
@@ -32,6 +33,8 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [editingOptions, setEditingOptions] = useState(false)
   const [optionsText, setOptionsText] = useState('')
+  const [editingAutoClose, setEditingAutoClose] = useState(false)
+  const [autoCloseAt, setAutoCloseAt] = useState('')
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -216,6 +219,68 @@ export default function AdminPage() {
     setEditingOptions(true)
   }
 
+  const handleUpdateAutoClose = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (autoCloseAt) {
+      const autoCloseDate = new Date(autoCloseAt)
+      if (isNaN(autoCloseDate.getTime())) {
+        setError('Invalid date format')
+        return
+      }
+      if (autoCloseDate <= new Date()) {
+        setError('Auto-close date must be in the future')
+        return
+      }
+    }
+
+    setLoading(true)
+
+    try {
+      const res = await fetch(`/api/votes/${voteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          writeSecret,
+          action: 'setAutoClose',
+          autoCloseAt: autoCloseAt || null
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || 'Failed to update auto-close time')
+        setLoading(false)
+        return
+      }
+
+      const data = await res.json()
+      setVote(data.vote)
+      setEditingAutoClose(false)
+    } catch (err) {
+      setError('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const startEditingAutoClose = () => {
+    if (vote?.auto_close_at) {
+      // Convert ISO string to datetime-local format
+      const date = new Date(vote.auto_close_at)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      setAutoCloseAt(`${year}-${month}-${day}T${hours}:${minutes}`)
+    } else {
+      setAutoCloseAt('')
+    }
+    setEditingAutoClose(true)
+  }
+
   if (!authenticated) {
     return (
       <div className="fade-in">
@@ -281,6 +346,16 @@ export default function AdminPage() {
             {vote.closed_at ? 'Closed' : 'Open'}
           </span>
         </p>
+        {vote.auto_close_at && !vote.closed_at && (
+          <p>
+            <strong>Auto-Close:</strong> {new Date(vote.auto_close_at).toLocaleString()}
+          </p>
+        )}
+        {vote.auto_close_at && vote.closed_at && (
+          <p>
+            <strong>Was Auto-Close:</strong> {new Date(vote.auto_close_at).toLocaleString()}
+          </p>
+        )}
         <p>
           <strong>Total Ballots:</strong> {vote.ballotCount}
         </p>
@@ -295,6 +370,58 @@ export default function AdminPage() {
             View Results
           </button>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h2>Auto-Close Settings</h2>
+        {!editingAutoClose ? (
+          <>
+            {vote.auto_close_at ? (
+              <p style={{ marginBottom: '1rem' }}>
+                Voting will automatically close at: <strong>{new Date(vote.auto_close_at).toLocaleString()}</strong>
+              </p>
+            ) : (
+              <p className="muted" style={{ marginBottom: '1rem' }}>
+                No auto-close time set. Voting will remain open indefinitely.
+              </p>
+            )}
+            <button onClick={startEditingAutoClose} disabled={!!vote.closed_at}>
+              {vote.auto_close_at ? 'Change Auto-Close Time' : 'Set Auto-Close Time'}
+            </button>
+            {vote.closed_at && (
+              <p className="muted" style={{ marginTop: '0.5rem' }}>
+                Cannot edit auto-close time for closed votes.
+              </p>
+            )}
+          </>
+        ) : (
+          <form onSubmit={handleUpdateAutoClose}>
+            <div className="form-group">
+              <label htmlFor="autoCloseAt">Auto-Close Date & Time</label>
+              <input
+                type="datetime-local"
+                id="autoCloseAt"
+                value={autoCloseAt}
+                onChange={(e) => setAutoCloseAt(e.target.value)}
+              />
+              <p className="muted">
+                Leave blank to remove auto-close and keep voting open indefinitely.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button type="submit" disabled={loading}>
+                {loading ? 'Saving...' : 'Save Auto-Close Time'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setEditingAutoClose(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: '1.5rem' }}>

@@ -11,7 +11,7 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, options, voteId: requestedId, writeSecret: requestedSecret, voterNamesRequired } = body
+    const { title, options, voteId: requestedId, writeSecret: requestedSecret, voterNamesRequired, autoCloseAt } = body
 
     // Validate title
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -78,6 +78,25 @@ export async function POST(request: NextRequest) {
       ? requestedSecret.trim()
       : generateWriteSecret()
 
+    // Validate autoCloseAt if provided
+    let validAutoCloseAt: string | null = null
+    if (autoCloseAt && typeof autoCloseAt === 'string' && autoCloseAt.trim().length > 0) {
+      const autoCloseDate = new Date(autoCloseAt)
+      if (isNaN(autoCloseDate.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid auto-close date format' },
+          { status: 400 }
+        )
+      }
+      if (autoCloseDate <= new Date()) {
+        return NextResponse.json(
+          { error: 'Auto-close date must be in the future' },
+          { status: 400 }
+        )
+      }
+      validAutoCloseAt = autoCloseDate.toISOString()
+    }
+
     // Hash the secret for storage
     const writeSecretHash = await hashSecret(writeSecret)
 
@@ -87,7 +106,8 @@ export async function POST(request: NextRequest) {
       title.trim(),
       cleanOptions,
       writeSecretHash,
-      voterNamesRequired !== false // Default to true if not specified
+      voterNamesRequired !== false, // Default to true if not specified
+      validAutoCloseAt
     )
 
     return NextResponse.json({

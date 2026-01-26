@@ -1,7 +1,10 @@
-# RCV Lunch Picker
+<div align="center">
+  <img src="public/logo.png" alt="RCV App Logo" width="200"/>
+</div>
 
-A small, self-hosted web app for helping a group of friends make fair decisions
-(like where to eat for lunch) using **Ranked Choice Voting (RCV / IRV)**.
+# Ranked Choice Voting App
+
+A small, self-hosted web app for helping a group of friends make fair decisions using **Ranked Choice Voting (RCV / IRV)**.
 
 This project is intentionally:
 - Simple
@@ -13,7 +16,7 @@ This project is intentionally:
 
 ## What This Is
 
-RCV Lunch Picker lets a group:
+Ranked Choice Voting App lets a group:
 1. Create a vote with a short, shareable ID
 2. Rank options in order of preference
 3. See *exactly* how a winner was chosen, round by round
@@ -68,9 +71,10 @@ npm test
 4. Choose whether to require voter names (checkbox, default: required)
    - **Required**: Voters must provide their name (good for coordination)
    - **Optional**: Anonymous voting allowed
-5. Optionally set a custom vote ID (e.g., `team-lunch`) and write secret
-6. Click "Create Vote"
-7. **Save the write secret!** It's shown only once and needed for:
+5. Optionally set an auto-close date/time (voting will automatically close at this time)
+6. Optionally set a custom vote ID (e.g., `team-lunch`) and write secret (under advanced options)
+7. Click "Create Vote"
+8. **Save the write secret!** It's shown only once and needed for:
    - Submitting ballots
    - Accessing the admin panel
 
@@ -113,7 +117,23 @@ You'll receive three URLs:
    - Delete the entire vote permanently
    - Close voting (prevents new ballot submissions)
    - Reopen voting (allows new submissions again)
+   - Set or change auto-close date/time
    - Edit vote options (removes deleted options from existing ballots)
+
+### Programmatic Access (API)
+
+For automated vote creation and management, see the [API Documentation](docs/API.md).
+
+Example: Create a vote via curl
+```bash
+curl -X POST http://localhost:3100/api/votes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Friday Lunch",
+    "options": ["Pizza", "Sushi", "Tacos"],
+    "autoCloseAt": "2026-01-26T18:00:00Z"
+  }'
+```
 
 ---
 
@@ -198,8 +218,10 @@ See `.gitlab-ci.yml` comments for detailed setup instructions.
 - **Ranked Choice Voting (IRV)**: Instant-runoff voting with explainable round-by-round results
 - **Opt-Out Voting UX**: All options pre-ranked; remove unwanted choices
 - **Custom Options**: Voters can suggest new options dynamically
+- **Auto-Close**: Set automatic voting deadline with date/time picker
 - **Flexible Anonymity**: Vote creators choose whether names are required (default) or optional for anonymous voting
-- **Admin Panel**: Full vote management (delete, close/reopen, edit options)
+- **Admin Panel**: Full vote management (delete, close/reopen, edit options, set auto-close)
+- **REST API**: Full programmatic access for automated vote creation (see [docs/API.md](docs/API.md))
 - **Vote IDs**: Support dashes for readable URLs (e.g., `/v/team-lunch`)
 
 ### Key Files
@@ -213,6 +235,8 @@ src/
 │   │   ├── results/       # Results with voter names
 │   │   └── admin/         # Admin panel
 │   └── api/               # API routes
+│       ├── admin/
+│       │   └── api-keys/route.ts # API key management (admin only)
 │       └── votes/         # Vote/ballot endpoints
 │           ├── route.ts                    # Create vote
 │           └── [voteId]/
@@ -233,6 +257,7 @@ deploy/
 └── README.md                 # Deployment instructions
 
 docs/
+├── API.md                    # REST API documentation
 ├── refactor-opportunities.md # Future improvement ideas
 ├── CHANGELOG.md              # Work history
 └── archive/                  # Archived documentation
