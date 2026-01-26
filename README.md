@@ -175,6 +175,10 @@ See [deploy/README.md](deploy/README.md) for detailed deployment instructions.
    sudo nginx -t && sudo systemctl reload nginx
    ```
 
+   Assumption: The production setup serves the app under `/rcv`. Keep
+   `basePath: '/rcv'` in `next.config.js` before building, or asset paths will
+   break when proxied under `/rcv`.
+
 6. **Enable HTTPS**
    ```bash
    sudo certbot --nginx -d your-domain.com

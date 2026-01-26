@@ -4,6 +4,10 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['better-sqlite3'],
   },
+  basePath: '/rcv',
+  env: {
+    NEXT_PUBLIC_BASE_PATH: '/rcv',
+  },
 }
 
 module.exports = nextConfig
