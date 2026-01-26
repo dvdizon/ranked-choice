@@ -124,9 +124,18 @@ ADMIN_SECRET=                          # Optional - enables admin API endpoints 
 
 ### Base Path Assumption
 Production deployments may serve the app under `/rcv`. When that is true,
-`next.config.js` must set `basePath: '/rcv'`, and internal navigation should
-use `withBasePath()` from `src/lib/paths.ts`, which deduplicates repeated `/rcv`
-prefixes to keep links stable.
+`next.config.js` must set `basePath: '/rcv'`.
+
+**IMPORTANT:** The `withBasePath()` helper from `src/lib/paths.ts` should ONLY be used for:
+- API fetch calls (e.g., `fetch(withBasePath('/api/votes'))`)
+- Server-side operations
+
+**DO NOT use** `withBasePath()` with client-side navigation methods like:
+- `router.push()` - Next.js automatically applies `basePath` from config
+- `router.replace()` - Next.js automatically applies `basePath` from config
+- `<Link href="">` - Next.js automatically applies `basePath` from config
+
+Using `withBasePath()` with these methods will cause double prefixing (e.g., `/rcv/rcv/v/...`).
 
 ### Production Checklist
 1. Create data directory: `sudo mkdir -p /var/lib/rcv-lunch`
