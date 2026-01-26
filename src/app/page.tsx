@@ -23,6 +23,7 @@ export default function CreateVotePage() {
   const [optionsText, setOptionsText] = useState('')
   const [customId, setCustomId] = useState('')
   const [customSecret, setCustomSecret] = useState('')
+  const [voterNamesRequired, setVoterNamesRequired] = useState(true)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -53,6 +54,7 @@ export default function CreateVotePage() {
           options,
           voteId: customId || undefined,
           writeSecret: customSecret || undefined,
+          voterNamesRequired,
         }),
       })
 
@@ -82,6 +84,8 @@ export default function CreateVotePage() {
   if (createdVote) {
     const voteFullUrl = getFullUrl(createdVote.voteUrl)
     const resultsFullUrl = getFullUrl(createdVote.resultsUrl)
+    const adminUrl = `/v/${createdVote.vote.id}/admin`
+    const adminFullUrl = getFullUrl(adminUrl)
 
     return (
       <div className="fade-in">
@@ -100,6 +104,7 @@ export default function CreateVotePage() {
           </div>
           <p className="muted" style={{ marginTop: '0.5rem' }}>
             Share this secret with voters so they can submit ballots.
+            You'll also need this to access the admin panel.
             This will only be shown once.
           </p>
         </div>
@@ -113,12 +118,22 @@ export default function CreateVotePage() {
               <CopyButton text={voteFullUrl} label="Copy vote URL" />
             </div>
           </div>
-          <div>
+          <div style={{ marginBottom: '0.75rem' }}>
             <p><strong>Results page:</strong></p>
             <div className="copyable-field">
               <a href={createdVote.resultsUrl} className="link-text">{resultsFullUrl}</a>
               <CopyButton text={resultsFullUrl} label="Copy results URL" />
             </div>
+          </div>
+          <div>
+            <p><strong>Admin panel:</strong></p>
+            <div className="copyable-field">
+              <a href={adminUrl} className="link-text">{adminFullUrl}</a>
+              <CopyButton text={adminFullUrl} label="Copy admin URL" />
+            </div>
+            <p className="muted" style={{ marginTop: '0.5rem' }}>
+              Use the write secret to access admin controls (delete vote, manage ballots, edit options).
+            </p>
           </div>
         </div>
 
@@ -134,6 +149,7 @@ export default function CreateVotePage() {
               setOptionsText('')
               setCustomId('')
               setCustomSecret('')
+              setVoterNamesRequired(true)
             }}
           >
             Create Another
@@ -158,7 +174,7 @@ export default function CreateVotePage() {
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Friday Lunch"
+            placeholder="e.g., Team Lunch Decision"
             required
           />
         </div>
@@ -174,6 +190,21 @@ export default function CreateVotePage() {
             required
           />
           <p className="muted">Enter at least 2 options, one per line.</p>
+        </div>
+
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={voterNamesRequired}
+              onChange={(e) => setVoterNamesRequired(e.target.checked)}
+            />
+            <span>Require voter names (recommended for coordination)</span>
+          </label>
+          <p className="muted">
+            When enabled, voters must enter their name when submitting a ballot.
+            When disabled, ballots are anonymous.
+          </p>
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
@@ -195,9 +226,9 @@ export default function CreateVotePage() {
                 id="customId"
                 value={customId}
                 onChange={(e) => setCustomId(e.target.value)}
-                placeholder="e.g., friday-lunch"
+                placeholder="e.g., team-lunch"
               />
-              <p className="muted">Lowercase letters and numbers only. Leave blank to auto-generate.</p>
+              <p className="muted">Lowercase letters, numbers, and dashes. Leave blank to auto-generate.</p>
             </div>
 
             <div className="form-group">

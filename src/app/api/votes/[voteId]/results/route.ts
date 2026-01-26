@@ -44,6 +44,11 @@ export async function GET(
         totalBallots: results.totalBallots,
         rounds: results.rounds,
       },
+      ballots: ballots.map((b) => ({
+        voter_name: b.voter_name,
+        rankings: b.rankings,
+        created_at: b.created_at,
+      })),
     })
   } catch (error) {
     console.error('Error fetching results:', error)

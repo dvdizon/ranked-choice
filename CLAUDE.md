@@ -41,12 +41,22 @@ src/
 ├── app/                    # Next.js App Router pages
 │   ├── page.tsx           # Home / Create vote
 │   ├── v/[voteId]/        # Vote and results pages
+│   │   ├── page.tsx       # Voting page (opt-out UX, custom options)
+│   │   ├── results/       # Results with voter names
+│   │   └── admin/         # Admin panel
 │   └── api/votes/         # REST API endpoints
+│       ├── route.ts       # Create vote
+│       └── [voteId]/
+│           ├── route.ts   # GET/DELETE/PATCH vote
+│           ├── ballots/   # Submit/view ballots
+│           │   ├── route.ts
+│           │   └── [ballotId]/route.ts  # Delete ballot
+│           └── results/route.ts
 └── lib/
     ├── db.ts              # SQLite database layer
     ├── irv.ts             # Pure IRV algorithm
     ├── irv.test.ts        # IRV unit tests
-    └── auth.ts            # Secret hashing
+    └── auth.ts            # Secret hashing/validation
 
 deploy/
 ├── nginx/rcv-lunch.conf   # nginx site config
@@ -66,11 +76,29 @@ deploy/
 - Run `npm test` before committing
 - Add tests for new business logic
 
+### Documentation Requirements
+**CRITICAL:** Before committing any code changes, you MUST update all relevant documentation:
+- **CHANGELOG.md** - Document all changes in the Unreleased section
+- **PLAN.md** - Update functional scope, change log, and add Decision Records for behavioral changes
+- **README.md** - Update usage instructions and key features if user-facing changes
+- **CLAUDE.md** - Update schema, features, or guidelines if architecture changes
+
+This ensures all documentation stays synchronized with code and future agents/contributors have accurate context.
+
 ### Database
 - SQLite via better-sqlite3
 - Schema in `src/lib/db.ts`
 - Production path: `/var/lib/rcv-lunch/rcv.sqlite`
 - Local dev path: `./data/rcv.sqlite`
+
+#### Schema
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voter_names_required` (INTEGER, default 1), `created_at`, `closed_at`
+- **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
+
+#### Key Functions
+- Vote CRUD: `createVote`, `getVote`, `deleteVote`, `voteExists`
+- Vote management: `closeVote`, `reopenVote`, `updateVoteOptions`, `appendVoteOptions`
+- Ballot operations: `createBallot`, `getBallot`, `getBallotsByVoteId`, `deleteBallot`, `countBallots`
 
 ### API Routes
 - REST endpoints under `/api/votes/`
@@ -114,6 +142,25 @@ See `.gitlab-ci.yml` for configuration.
 | `CLAUDE.md` | This file - development guidelines |
 | `docs/refactor-opportunities.md` | Deferred improvements |
 | `docs/CHANGELOG.md` | Work history and changes |
+
+## Key Features
+
+### Voting Experience
+- **Opt-out UX**: All options start ranked in random order; voters remove unwanted options
+- **Custom Options**: Voters can suggest new options (added dynamically for all voters)
+- **Optional Voter Names**: Vote creators choose whether names are required (default) or optional; enables both coordinated and anonymous voting
+- **Drag & Drop**: Reorder rankings with touch/mouse support (@dnd-kit)
+
+### Admin Capabilities
+- **Admin Panel** (`/v/:voteId/admin`): Write-secret protected management interface
+  - View all ballots with voter names and timestamps
+  - Delete individual ballots or entire vote
+  - Close/reopen voting (prevents new submissions when closed)
+  - Edit vote options (removes deleted options from existing ballots)
+
+### Vote ID Format
+- Alphanumeric characters and dashes allowed (e.g., `friday-lunch`)
+- 3-32 characters, case-insensitive (normalized to lowercase)
 
 ## RCV Rules (Authoritative)
 

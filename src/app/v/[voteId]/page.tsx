@@ -28,6 +28,8 @@ interface Vote {
   title: string
   options: string[]
   ballotCount: number
+  closed_at: string | null
+  voter_names_required: boolean
 }
 
 interface SortableItemProps {
@@ -116,6 +118,9 @@ export default function VotePage() {
   const [rankings, setRankings] = useState<string[]>([])
   const [unranked, setUnranked] = useState<string[]>([])
   const [writeSecret, setWriteSecret] = useState('')
+  const [voterName, setVoterName] = useState('')
+  const [customOption, setCustomOption] = useState('')
+  const [showCustomOption, setShowCustomOption] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -148,6 +153,16 @@ export default function VotePage() {
     }
   }, [voteId, router])
 
+  // Shuffle array using Fisher-Yates algorithm
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled
+  }
+
   // Fetch vote data
   useEffect(() => {
     if (voteId !== voteId.toLowerCase()) return
@@ -166,7 +181,9 @@ export default function VotePage() {
         }
         const data = await res.json()
         setVote(data)
-        setUnranked(data.options)
+        // Start with all options ranked in random order
+        setRankings(shuffleArray(data.options))
+        setUnranked([])
       } catch (err) {
         setError('Network error')
       } finally {
@@ -200,6 +217,26 @@ export default function VotePage() {
     setUnranked([...unranked, option])
   }
 
+  const addCustomOption = () => {
+    const trimmed = customOption.trim()
+    if (!trimmed) {
+      setError('Please enter a custom option')
+      return
+    }
+
+    // Check if option already exists (case-insensitive)
+    const allOptions = [...rankings, ...unranked]
+    if (allOptions.some((o) => o.toLowerCase() === trimmed.toLowerCase())) {
+      setError('This option already exists')
+      return
+    }
+
+    setRankings([...rankings, trimmed])
+    setCustomOption('')
+    setShowCustomOption(false)
+    setError('')
+  }
+
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -229,6 +266,11 @@ export default function VotePage() {
       return
     }
 
+    if (vote!.voter_names_required && !voterName.trim()) {
+      setError('Name is required')
+      return
+    }
+
     if (!writeSecret.trim()) {
       setError('Write secret is required')
       return
@@ -236,13 +278,19 @@ export default function VotePage() {
 
     setSubmitting(true)
 
+    // Detect custom options (options not in original vote.options)
+    const originalOptions = new Set(vote!.options)
+    const customOptions = rankings.filter((option) => !originalOptions.has(option))
+
     try {
       const res = await fetch(`/api/votes/${voteId}/ballots`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           rankings,
+          voterName: voterName.trim(),
           writeSecret: writeSecret.trim(),
+          customOptions: customOptions.length > 0 ? customOptions : undefined,
         }),
       })
 
@@ -310,9 +358,10 @@ export default function VotePage() {
             className="btn-secondary"
             onClick={() => {
               setSuccess(false)
-              setRankings([])
-              setUnranked(vote.options)
+              setRankings(shuffleArray(vote.options))
+              setUnranked([])
               setWriteSecret('')
+              setVoterName('')
             }}
           >
             Submit Another Ballot
@@ -331,11 +380,19 @@ export default function VotePage() {
         {vote.ballotCount} ballot{vote.ballotCount !== 1 ? 's' : ''} submitted
       </p>
 
+      {vote.closed_at && (
+        <div className="card" style={{ backgroundColor: 'rgba(255, 0, 0, 0.05)', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--error)', margin: 0 }}>
+            <strong>Voting is closed.</strong> This poll is no longer accepting new ballots.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '1.5rem' }}>
           <h2>Your Rankings</h2>
           <p className="muted" style={{ marginBottom: '0.5rem' }}>
-            Drag options to reorder or click + to add. Your top choice should be #1.
+            Drag to reorder or click × to remove options you don't want. Your top choice should be #1.
           </p>
 
           <DndContext
@@ -347,7 +404,7 @@ export default function VotePage() {
             <div className="card" style={{ minHeight: '100px' }}>
               {rankings.length === 0 ? (
                 <p className="muted" style={{ textAlign: 'center', padding: '1rem' }}>
-                  Click options below to rank them
+                  All options removed. Add some back to submit your ballot.
                 </p>
               ) : (
                 <SortableContext
@@ -381,9 +438,9 @@ export default function VotePage() {
 
         {unranked.length > 0 && (
           <div style={{ marginBottom: '1.5rem' }}>
-            <h2>Available Options</h2>
+            <h2>Removed Options</h2>
             <p className="muted" style={{ marginBottom: '0.5rem' }}>
-              Click to add to your rankings. Partial ranking is allowed.
+              Click to add back to your rankings.
             </p>
 
             <div className="card">
@@ -405,6 +462,76 @@ export default function VotePage() {
           </div>
         )}
 
+        {/* Custom option */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          {!showCustomOption ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowCustomOption(true)}
+            >
+              + Add Custom Option
+            </button>
+          ) : (
+            <div className="card">
+              <h3 style={{ marginBottom: '0.5rem' }}>Add Custom Option</h3>
+              <p className="muted" style={{ marginBottom: '0.75rem' }}>
+                Suggest a new option. It will be added to your rankings and become available for others.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <input
+                  type="text"
+                  value={customOption}
+                  onChange={(e) => setCustomOption(e.target.value)}
+                  placeholder="Enter your custom option"
+                  style={{ flex: 1 }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addCustomOption()
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomOption}
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowCustomOption(false)
+                    setCustomOption('')
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="voterName">
+            Your Name{!vote?.voter_names_required && ' (optional)'}
+          </label>
+          <input
+            type="text"
+            id="voterName"
+            value={voterName}
+            onChange={(e) => setVoterName(e.target.value)}
+            placeholder={vote?.voter_names_required ? "Enter your name" : "Enter your name (optional)"}
+            required={vote?.voter_names_required}
+          />
+          <p className="muted">
+            {vote?.voter_names_required
+              ? "Your name will be visible to other voters and the vote creator."
+              : "If provided, your name will be visible to other voters and the vote creator."}
+          </p>
+        </div>
+
         <div className="form-group">
           <label htmlFor="writeSecret">Write Secret</label>
           <input
@@ -421,8 +548,8 @@ export default function VotePage() {
         {error && <p className="error" style={{ marginBottom: '1rem' }}>{error}</p>}
 
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button type="submit" disabled={submitting || rankings.length === 0}>
-            {submitting ? 'Submitting...' : 'Submit Ballot'}
+          <button type="submit" disabled={submitting || rankings.length === 0 || vote.closed_at !== null}>
+            {submitting ? 'Submitting...' : vote.closed_at ? 'Voting Closed' : 'Submit Ballot'}
           </button>
           <button
             type="button"

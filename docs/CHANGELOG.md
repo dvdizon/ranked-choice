@@ -9,13 +9,44 @@ This document tracks work history, including what was implemented by AI agents a
 ## [Unreleased]
 
 ### Added
+- **Admin Panel** (`src/app/v/[voteId]/admin/page.tsx`)
+  - Authentication with write secret
+  - View all ballots with voter names and timestamps
+  - Delete individual ballots
+  - Delete entire vote
+  - Close/reopen voting
+  - Edit vote options (removes deleted options from existing ballots)
+  - Admin URL provided on vote creation page
+- **Custom "Other" Options**
+  - Voters can suggest new options during ballot submission
+  - Custom options are added to rankings and become available for other voters
+  - Duplicate checking (case-insensitive)
+- **Optional Voter Names** - Vote creators can choose whether voter names are required or optional
+  - Added `voter_names_required` column to votes table with migration support
+  - Checkbox on vote creation form to toggle requirement (default: required)
+  - When optional, ballots can be submitted anonymously
+  - Anonymous ballots displayed as "Anonymous" on results and admin pages
+  - Enables both coordinated (named) and anonymous voting use cases
 - `CLAUDE.md` - Best practices and development guidelines for AI agents and contributors
 - `.gitlab-ci.yml` - GitLab CI/CD pipeline with lint, test, build, and deploy stages
 - `docs/CHANGELOG.md` - This file documenting work history
 - `docs/archive/` - Archive directory for superseded documentation
 
 ### Changed
+- **Vote ID format** - Now allows dashes in addition to letters and numbers (e.g., `team-lunch`)
+- **Voting UX** - Changed from opt-in to opt-out behavior
+  - All options now start pre-ranked in random order
+  - Voters remove unwanted options instead of adding desired ones
+  - Reduces cognitive load and prevents ballot exhaustion
+- **Generic branding** - Replaced "Friday Lunch" example text with "Team Lunch Decision" to emphasize app is not lunch-specific
+- **Cross-platform compatibility** - Fixed `package.json` scripts to use hardcoded port 3100 instead of bash variable expansion
 - Archived `AI-SEED-PROMPT.md` to `docs/archive/` (original purpose fulfilled)
+
+### Database Changes
+- Added `voter_name TEXT NOT NULL` column to `ballots` table
+- Added `voter_names_required INTEGER NOT NULL DEFAULT 1` column to `votes` table
+- Added `appendVoteOptions()` function for dynamic option addition
+- Database migrations handle existing data gracefully
 
 ### CI/CD Pipeline Details
 The GitLab CI/CD pipeline includes:
