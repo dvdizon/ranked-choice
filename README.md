@@ -72,16 +72,19 @@ npm test
    - **Required**: Voters must provide their name (good for coordination)
    - **Optional**: Anonymous voting allowed
 5. Optionally set an auto-close date/time (voting will automatically close at this time)
-6. Optionally set a custom vote ID (e.g., `team-lunch`) and write secret (under advanced options)
+6. Optionally set custom secrets (under advanced options):
+   - **Admin Secret**: For managing the vote (admin panel, editing, deleting)
+   - **Voting Secret**: For submitting ballots (share with voters)
+   - **Vote ID**: Custom short identifier (e.g., `team-lunch`)
 7. Click "Create Vote"
-8. **Save the write secret!** It's shown only once and needed for:
-   - Submitting ballots
-   - Accessing the admin panel
+8. **Save both secrets!** They're shown only once:
+   - **Admin Secret**: Required for admin panel access
+   - **Voting Secret**: Required for ballot submission (can be shared widely)
 
 You'll receive three URLs:
-- **Vote page**: Share with voters
+- **Vote page**: Share with voters (includes voting secret in URL)
 - **Results page**: View live results
-- **Admin panel**: Manage the vote (requires write secret)
+- **Admin panel**: Manage the vote (requires admin secret)
 
 ### Submitting a Ballot
 
@@ -91,7 +94,7 @@ You'll receive three URLs:
 4. Remove options you don't want by clicking ×
 5. Optionally add custom options with "+ Add Custom Option"
 6. Enter your name (required or optional based on vote settings)
-7. Enter the write secret
+7. Enter the voting secret (or it may be pre-filled from the URL)
 8. Submit your ballot
 
 **Notes:**
@@ -110,7 +113,7 @@ You'll receive three URLs:
 ### Managing a Vote (Admin Panel)
 
 1. Go to `/v/<vote-id>/admin`
-2. Enter the write secret
+2. Enter the admin secret
 3. Available actions:
    - View all ballots with voter names (or "Anonymous") and timestamps
    - Delete individual ballots (e.g., duplicates or test submissions)
@@ -197,11 +200,18 @@ This project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) tha
 | `typecheck` | TypeScript type checking |
 | `test` | Jest unit tests with coverage |
 | `build` | Next.js production build |
-| `deploy_production` | SSH-based deployment (manual trigger) |
+| `deploy_production` | SSH-based deployment (auto-triggers on merge to main) |
 
-### Enabling Deployment
+### Deployment Behavior
 
-Deployment requires configuring GitHub Actions secrets:
+- **Automatic deployment**: Triggers when code is merged to the main branch
+- **Pull requests**: Only run CI checks (lint, typecheck, test, build) without deploying
+- **Post-deploy verification**: Polls `/health` endpoint for up to 30 seconds to verify successful deployment
+- **Health check failure**: Dumps pm2 logs and fails the deployment if health check doesn't pass
+
+### Configuring Deployment
+
+Deployment requires the following GitHub Actions secrets:
 - `DEPLOY_HOST` - Server hostname
 - `DEPLOY_USER` - SSH username
 - `DEPLOY_SSH_KEY` - SSH private key
@@ -209,23 +219,14 @@ Deployment requires configuring GitHub Actions secrets:
 - `DEPLOY_PORT` - SSH port (optional, default: 22)
 - `PM2_PROCESS_NAME` - pm2 process name (optional, default: rcv-lunch)
 
-See `.github/workflows/ci.yml` for details. The existing `.gitlab-ci.yml` remains as a reference if you still run GitLab CI.
+### Skip CI
 
--------|---------|
-| `validate` | ESLint + TypeScript type checking |
-| `test` | Jest unit tests with coverage |
-| `build` | Next.js production build |
-| `deploy` | SSH-based deployment (manual trigger) |
+To skip CI checks for documentation-only or trivial changes, include `[skip ci]` or `[ci skip]` in your commit message:
+```bash
+git commit -m "docs: update README [skip ci]"
+```
 
-### Enabling Deployment
-
-Deployment requires configuring CI/CD variables in GitLab:
-- `DEPLOY_HOST` - Server hostname
-- `DEPLOY_USER` - SSH username
-- `DEPLOY_SSH_KEY` - SSH private key (file type)
-- `DEPLOY_PATH` - Application directory on server
-
-See `.gitlab-ci.yml` comments for detailed setup instructions.
+See `.github/workflows/ci.yml` for full configuration details.
 
 ---
 
@@ -244,6 +245,11 @@ See `.gitlab-ci.yml` comments for detailed setup instructions.
 - **Custom Options**: Voters can suggest new options dynamically
 - **Auto-Close**: Set automatic voting deadline with date/time picker
 - **Flexible Anonymity**: Vote creators choose whether names are required (default) or optional for anonymous voting
+- **Separate Admin and Voting Secrets**: Two distinct secrets for better access control
+  - Admin secret for vote management (admin panel, editing, deleting)
+  - Voting secret for ballot submission (can be shared widely)
+- **Share Message**: Easy-to-copy formatted message with voting link (includes secret) and results link
+- **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Admin Panel**: Full vote management (delete, close/reopen, edit options, set auto-close)
 - **REST API**: Full programmatic access for automated vote creation (see [docs/API.md](docs/API.md))
 - **Vote IDs**: Support dashes for readable URLs (e.g., `/v/team-lunch`)

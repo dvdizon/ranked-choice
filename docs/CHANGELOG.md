@@ -14,6 +14,13 @@ This document tracks work history, including what was implemented by AI agents a
   - Saves GitHub Actions minutes and avoids unnecessary builds
 
 ### Changed
+- **README Documentation** - Updated to reflect current project state
+  - Removed outdated GitLab CI references (replaced with GitHub Actions in v0.2.0)
+  - Updated CI/CD section to reflect auto-deployment on merge to main (v0.3.1)
+  - Updated secret terminology to use "admin secret" and "voting secret" (v0.3.0)
+  - Added documentation for separate admin/voting secrets feature
+  - Added documentation for Share Message and URL secret support features
+  - Improved deployment behavior documentation with health check details
 - **Refactor Opportunities** - Marked health check endpoint (#23) as implemented
 
 ---
