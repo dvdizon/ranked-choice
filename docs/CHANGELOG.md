@@ -14,6 +14,18 @@ This document tracks work history, including what was implemented by AI agents a
   - Saves GitHub Actions minutes and avoids unnecessary builds
 
 ### Changed
+- **README Documentation** - Updated to reflect current project state
+  - Removed outdated GitLab CI references (replaced with GitHub Actions in v0.2.0)
+  - Updated CI/CD section to reflect auto-deployment on merge to main (v0.3.1)
+  - Updated secret terminology to use "admin secret" and "voting secret" (v0.3.0)
+  - Added documentation for separate admin/voting secrets feature
+  - Added documentation for Share Message and URL secret support features
+  - Improved deployment behavior documentation with health check details
+- **AI Agent Guidelines** - Enhanced documentation sync requirements
+  - Added "README Consistency Check" section to `AGENTS.md` with proactive verification steps
+  - Added "Proactive README Consistency Check" section to `CLAUDE.md` Documentation Requirements
+  - AI agents should now automatically check README consistency with CHANGELOG as part of every task
+  - Includes specific checks for outdated references, terminology consistency, and feature documentation
 - **Refactor Opportunities** - Marked health check endpoint (#23) as implemented
 
 ---

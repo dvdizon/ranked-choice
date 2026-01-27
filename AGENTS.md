@@ -14,6 +14,16 @@ Update all relevant docs for any change:
 - `CLAUDE.md` (architecture, conventions, or new files)
 - `docs/` files that describe affected behavior (ex: `docs/API.md`)
 
+### README Consistency Check (Proactive)
+After making changes, **always verify README consistency** with CHANGELOG:
+- Check that README reflects features mentioned in recent CHANGELOG versions
+- Remove outdated references to deprecated tools/processes (e.g., old CI systems)
+- Update terminology to match current implementation (e.g., secret naming)
+- Ensure CI/CD, deployment, and feature descriptions match current state
+- If you find inconsistencies, fix them proactively before committing your main changes
+
+**This check should happen automatically as part of your workflow, not only when explicitly requested.**
+
 ## Quality Gates (Required Before Commit)
 Run all checks:
 ```bash
