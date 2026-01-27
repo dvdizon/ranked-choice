@@ -8,6 +8,24 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+---
+
+## [0.2.0] - 2026-01-26
+
+### Added
+- **Health Check Endpoint** - Added `/api/health` endpoint for deployment verification
+  - Returns simple `{"status": "ok"}` response
+  - Used by CI/CD pipeline for post-deploy health checks
+  - Intended to be restricted to localhost via nginx configuration
+
+### Changed
+- **CI/CD Pipeline** - Removed GitLab CI configuration in favor of GitHub Actions
+  - Deleted `.gitlab-ci.yml` file (GitHub Actions is now the primary CI/CD system)
+  - Enhanced GitHub Actions deploy job with post-deploy verification
+  - Added health check polling after pm2 restart (15 attempts with 2s intervals)
+  - Deploy job now fails fast if health check doesn't pass within 30 seconds
+  - Dumps pm2 logs on health check failure for debugging
+
 ### Fixed
 - **Duplicate Base Path in Client-Side Navigation** - Removed `withBasePath()` from `router.push()` and `router.replace()` calls to prevent double `/rcv/rcv` prefixing. Next.js automatically applies `basePath` from config to client-side navigation, so the helper is only needed for server-side API calls.
 
