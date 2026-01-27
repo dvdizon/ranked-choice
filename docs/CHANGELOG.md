@@ -8,10 +8,29 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+---
+
+## [0.3.0] - 2026-01-26
+
+### Added
+- **Separate Admin and Voting Secrets** - Votes now have two distinct secrets for better access control
+  - Admin secret: For managing the vote (admin panel, editing options, deleting ballots)
+  - Voting secret: For submitting ballots (can be shared widely with voters)
+  - Backwards compatible: Old votes without voting_secret_hash still work with original secret
+- **URL Secret Parameter** - Voting secret can be passed via `?secret=` URL parameter
+  - Vote links can include the secret for easy sharing
+  - Secret field auto-fills when accessing vote page with parameter
+- **Share Message** - New easy-to-copy formatted message after vote creation
+  - Includes vote title, voting link with secret, and results link
+  - One-click copy for sharing via Slack, email, etc.
+
 ### Changed
 - **CI/CD Deployment** - Switched from manual SSH/rsync to `appleboy/ssh-action` for more reliable SSH key handling
   - Deployment now pulls from git on the server instead of pushing via rsync
   - Simpler configuration with better error handling
+- **Secret Terminology** - Updated UI labels to distinguish admin vs voting secrets
+  - "Write Secret" renamed to "Admin Secret" in admin panel
+  - "Write Secret" renamed to "Voting Secret" on voting page
 
 ### Fixed
 - **Production Build Memory Limit** - Added `NODE_OPTIONS="--max-old-space-size=256"` to production build command in CI/CD pipeline to address memory constraints on production host

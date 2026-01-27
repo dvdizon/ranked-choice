@@ -105,9 +105,13 @@ When creating a new release:
 - Local dev path: `./data/rcv.sqlite`
 
 #### Schema
-- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`
 - **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
 - **api_keys table**: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
+
+**Note on secrets:** Votes have two separate secrets:
+- `write_secret_hash` (admin secret): For managing the vote (admin panel, editing, deleting)
+- `voting_secret_hash`: For submitting ballots. If NULL, falls back to `write_secret_hash` for backwards compatibility
 
 #### Key Functions
 - Vote CRUD: `createVote`, `getVote`, `deleteVote`, `voteExists`
@@ -198,9 +202,12 @@ location /health {
 - **Auto-Close**: Set automatic voting deadline with date/time picker
 - **Drag & Drop**: Reorder rankings with touch/mouse support (@dnd-kit)
 - **Persistent Options**: Vote creator's last-used options saved in localStorage
+- **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 
 ### Admin Capabilities
-- **Admin Panel** (`/v/:voteId/admin`): Write-secret protected management interface
+- **Separate Secrets**: Admin secret (for management) vs Voting secret (for ballot submission)
+- **Share Message**: Easy copy-paste formatted message with voting link (includes secret) and results link
+- **Admin Panel** (`/v/:voteId/admin`): Admin-secret protected management interface
   - View all ballots with voter names and timestamps
   - Delete individual ballots or entire vote
   - Close/reopen voting (prevents new submissions when closed)

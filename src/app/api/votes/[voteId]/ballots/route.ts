@@ -20,12 +20,13 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { rankings, writeSecret, voterName, customOptions } = body
+    const { rankings, writeSecret, votingSecret, voterName, customOptions } = body
 
-    // Verify write secret
-    if (!writeSecret || typeof writeSecret !== 'string') {
+    // Accept either votingSecret (new) or writeSecret (legacy)
+    const providedSecret = votingSecret || writeSecret
+    if (!providedSecret || typeof providedSecret !== 'string') {
       return NextResponse.json(
-        { error: 'Write secret is required' },
+        { error: 'Voting secret is required' },
         { status: 401 }
       )
     }
@@ -40,10 +41,12 @@ export async function POST(
       }
     }
 
-    const isValid = await verifySecret(writeSecret, vote.write_secret_hash)
+    // Verify against voting_secret_hash if available, otherwise fall back to write_secret_hash
+    const hashToVerify = vote.voting_secret_hash || vote.write_secret_hash
+    const isValid = await verifySecret(providedSecret, hashToVerify)
     if (!isValid) {
       return NextResponse.json(
-        { error: 'Invalid write secret' },
+        { error: 'Invalid voting secret' },
         { status: 403 }
       )
     }
