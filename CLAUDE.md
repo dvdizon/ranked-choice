@@ -89,6 +89,22 @@ deploy/
 
 This ensures all documentation stays synchronized with code and future agents/contributors have accurate context.
 
+### Commit Guidelines
+**Skip CI for documentation-only changes:** When a commit contains ONLY documentation changes (markdown files, comments, changelog updates, etc.) and no code changes that would affect build/tests, include `[skip ci]` in the commit message to save CI resources:
+```bash
+git commit -m "docs: update refactor opportunities [skip ci]"
+```
+
+Use `[skip ci]` when:
+- Updating markdown files (README, CHANGELOG, CLAUDE.md, docs/*)
+- Fixing typos or improving documentation
+- Updating comments without changing code logic
+
+Do NOT use `[skip ci]` when:
+- Any source code files are modified (.ts, .tsx, .js, .css, etc.)
+- Configuration files are changed (package.json, next.config.js, etc.)
+- CI workflow files are changed (unless the change is trivial and tested)
+
 ### Version Management
 **IMPORTANT:** Version bumps must always be performed by AI agents, not manually. This ensures consistency and proper changelog updates.
 
@@ -175,6 +191,12 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
   - Includes post-deploy health check verification
   - Polls `/health` endpoint for up to 30 seconds
   - Dumps pm2 logs and fails deployment if health check doesn't pass
+
+### Skip CI
+To skip CI checks for documentation-only or trivial changes, include `[skip ci]` or `[ci skip]` in your commit message:
+```bash
+git commit -m "docs: update README [skip ci]"
+```
 
 See `.github/workflows/ci.yml` for configuration.
 

@@ -176,12 +176,13 @@ Add Dockerfile and docker-compose for:
 
 **Why not now**: The target is a simple droplet deployment; Docker adds complexity.
 
-### 23. Health Check Endpoint
+### 23. Health Check Endpoint (IMPLEMENTED)
 Add `/api/health` that checks:
-- Database connectivity
-- App version
+- ✅ Basic health status (returns `{"status": "ok"}`)
+- ❌ Database connectivity check
+- ❌ App version reporting
 
-**Why not now**: nginx config includes a basic `/health` endpoint; app-level health check could be added.
+**Status**: Basic health check implemented for deployment verification. Extended checks (database connectivity, version) remain unimplemented.
 
 ### 24. Metrics and Monitoring
 Add observability:
@@ -238,6 +239,7 @@ The following items were previously in this list and have been implemented:
 - **Copy-to-Clipboard for Links/Secret** (UX #10) - Added copy buttons for secret and URLs on vote creation
 - **Dark Mode** (UX #11) - Added theme toggle with system preference detection and persistence
 - **Animations and Transitions** (UX #12) - Added fade-in animations, loading skeletons, and smooth transitions
+- **Health Check Endpoint** (DevOps #23) - Basic `/api/health` endpoint for deployment verification
 
 ---
 

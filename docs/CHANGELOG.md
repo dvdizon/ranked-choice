@@ -8,6 +8,14 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+### Added
+- **Skip CI Support** - CI workflow can be skipped by including `[skip ci]` or `[ci skip]` in commit message
+  - Useful for documentation-only or trivial changes
+  - Saves GitHub Actions minutes and avoids unnecessary builds
+
+### Changed
+- **Refactor Opportunities** - Marked health check endpoint (#23) as implemented
+
 ---
 
 ## [0.3.1] - 2026-01-26
