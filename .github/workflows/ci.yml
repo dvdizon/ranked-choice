@@ -96,7 +96,7 @@ jobs:
             git reset --hard origin/main
 
             echo "==> Installing dependencies"
-            npm ci --production
+            npm ci
 
             echo "==> Building"
             NODE_OPTIONS="--max-old-space-size=256" npm run build
