@@ -89,6 +89,15 @@ deploy/
 
 This ensures all documentation stays synchronized with code and future agents/contributors have accurate context.
 
+### Version Management
+When creating a new release:
+1. Move the "Unreleased" section content in `CHANGELOG.md` to a new version section with date
+2. Update `package.json` version field to match
+3. Follow semantic versioning (MAJOR.MINOR.PATCH):
+   - **MAJOR**: Breaking changes to user-facing behavior or API
+   - **MINOR**: New features, backward compatible
+   - **PATCH**: Bug fixes, documentation updates
+
 ### Database
 - SQLite via better-sqlite3
 - Schema in `src/lib/db.ts`
@@ -109,6 +118,7 @@ This ensures all documentation stays synchronized with code and future agents/co
 ### API Routes
 - REST endpoints under `/api/votes/` - See `docs/API.md` for comprehensive API documentation
 - Admin endpoints under `/api/admin/` - Requires `ADMIN_SECRET` environment variable
+- Health check endpoint at `/api/health` - Returns `{"status": "ok"}` for deployment verification
 - JSON request/response bodies
 - Write operations require vote secret
 
@@ -154,10 +164,21 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
 - **test** - Jest unit tests with coverage
 - **build** - Next.js production build
 - **deploy_production** - SSH-based deployment (manual trigger)
-
-The existing `.gitlab-ci.yml` remains as a reference if GitLab CI is still used.
+  - Includes post-deploy health check verification
+  - Polls `/health` endpoint for up to 30 seconds
+  - Dumps pm2 logs and fails deployment if health check doesn't pass
 
 See `.github/workflows/ci.yml` for configuration.
+
+### Health Check
+The `/api/health` endpoint should be restricted to localhost access in nginx:
+```nginx
+location /health {
+    allow 127.0.0.1;
+    deny all;
+    proxy_pass http://127.0.0.1:3100;
+}
+```
 ## Key Files
 
 | File | Purpose |
