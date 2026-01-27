@@ -90,6 +90,8 @@ deploy/
 This ensures all documentation stays synchronized with code and future agents/contributors have accurate context.
 
 ### Version Management
+**IMPORTANT:** Version bumps must always be performed by AI agents, not manually. This ensures consistency and proper changelog updates.
+
 When creating a new release:
 1. Move the "Unreleased" section content in `CHANGELOG.md` to a new version section with date
 2. Update `package.json` version field to match

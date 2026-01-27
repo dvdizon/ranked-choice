@@ -73,7 +73,7 @@ export default function CreateVotePage() {
           voteId: customId || undefined,
           writeSecret: customSecret || undefined,
           voterNamesRequired,
-          autoCloseAt: autoCloseAt || undefined,
+          autoCloseAt: autoCloseAt ? new Date(autoCloseAt).toISOString() : undefined,
         }),
       })
 
