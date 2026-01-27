@@ -8,6 +8,11 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+### Changed
+- **CI/CD Deployment** - Switched from manual SSH/rsync to `appleboy/ssh-action` for more reliable SSH key handling
+  - Deployment now pulls from git on the server instead of pushing via rsync
+  - Simpler configuration with better error handling
+
 ### Fixed
 - **Production Build Memory Limit** - Added `NODE_OPTIONS="--max-old-space-size=256"` to production build command in CI/CD pipeline to address memory constraints on production host
 
