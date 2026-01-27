@@ -111,7 +111,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST << EOF
             cd $DEPLOY_PATH
             npm ci --production
-            npm run build
+            NODE_OPTIONS="--max-old-space-size=256" npm run build
             pm2 reload $PM2_PROCESS_NAME || pm2 start deploy/pm2/ecosystem.config.cjs
             pm2 save
 
