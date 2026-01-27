@@ -21,6 +21,11 @@ This document tracks work history, including what was implemented by AI agents a
   - Added documentation for separate admin/voting secrets feature
   - Added documentation for Share Message and URL secret support features
   - Improved deployment behavior documentation with health check details
+- **AI Agent Guidelines** - Enhanced documentation sync requirements
+  - Added "README Consistency Check" section to `AGENTS.md` with proactive verification steps
+  - Added "Proactive README Consistency Check" section to `CLAUDE.md` Documentation Requirements
+  - AI agents should now automatically check README consistency with CHANGELOG as part of every task
+  - Includes specific checks for outdated references, terminology consistency, and feature documentation
 - **Refactor Opportunities** - Marked health check endpoint (#23) as implemented
 
 ---

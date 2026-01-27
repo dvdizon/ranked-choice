@@ -89,6 +89,16 @@ deploy/
 
 This ensures all documentation stays synchronized with code and future agents/contributors have accurate context.
 
+#### Proactive README Consistency Check
+**IMPORTANT:** As part of every task, you should proactively verify that README.md is consistent with recent CHANGELOG entries. This check should happen automatically, not only when explicitly requested:
+
+1. **Check for outdated references**: Look for mentions of deprecated tools, old CI/CD systems, or superseded features
+2. **Verify terminology matches current implementation**: Ensure naming (e.g., "admin secret" vs "write secret") reflects the current codebase
+3. **Validate feature descriptions**: Confirm that features mentioned in recent CHANGELOG versions are properly documented in README
+4. **Check CI/CD and deployment sections**: Ensure these match the current workflow configuration
+
+If you find inconsistencies during your work, fix them proactively as part of your task. Document these fixes in CHANGELOG under the Unreleased section.
+
 ### Commit Guidelines
 **Skip CI for documentation-only changes:** When a commit contains ONLY documentation changes (markdown files, comments, changelog updates, etc.) and no code changes that would affect build/tests, include `[skip ci]` in the commit message to save CI resources:
 ```bash
