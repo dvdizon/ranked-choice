@@ -8,6 +8,9 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+### Fixed
+- **Production Build Memory Limit** - Added `NODE_OPTIONS="--max-old-space-size=256"` to production build command in CI/CD pipeline to address memory constraints on production host
+
 ---
 
 ## [0.2.0] - 2026-01-26
