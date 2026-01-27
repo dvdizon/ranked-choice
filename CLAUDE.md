@@ -176,6 +176,12 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
   - Polls `/health` endpoint for up to 30 seconds
   - Dumps pm2 logs and fails deployment if health check doesn't pass
 
+### Skip CI
+To skip CI checks for documentation-only or trivial changes, include `[skip ci]` or `[ci skip]` in your commit message:
+```bash
+git commit -m "docs: update README [skip ci]"
+```
+
 See `.github/workflows/ci.yml` for configuration.
 
 ### Health Check
