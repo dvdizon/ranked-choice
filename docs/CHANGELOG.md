@@ -10,6 +10,20 @@ This document tracks work history, including what was implemented by AI agents a
 
 ---
 
+## [0.3.1] - 2026-01-26
+
+### Changed
+- **CI/CD Auto-Deploy** - Production deployment now triggers automatically on merge to main
+  - No longer requires manual workflow dispatch
+  - PR events only run CI checks (lint, typecheck, test, build) without deploying
+
+### Fixed
+- **Auto-Close Time Timezone Bug** - Fixed bug where setting auto-close time (e.g., 8:00 AM) would save as a different time (e.g., 12:00 AM)
+  - Root cause: `datetime-local` input values were sent without timezone info and interpreted as UTC on the server
+  - Fix: Client now converts local datetime to proper ISO string before sending to API
+
+---
+
 ## [0.3.0] - 2026-01-26
 
 ### Added

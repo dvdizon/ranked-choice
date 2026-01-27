@@ -90,6 +90,8 @@ deploy/
 This ensures all documentation stays synchronized with code and future agents/contributors have accurate context.
 
 ### Version Management
+**IMPORTANT:** Version bumps must always be performed by AI agents, not manually. This ensures consistency and proper changelog updates.
+
 When creating a new release:
 1. Move the "Unreleased" section content in `CHANGELOG.md` to a new version section with date
 2. Update `package.json` version field to match
@@ -167,7 +169,9 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
 - **typecheck** - TypeScript type checking
 - **test** - Jest unit tests with coverage
 - **build** - Next.js production build
-- **deploy_production** - SSH-based deployment (manual trigger)
+- **deploy_production** - SSH-based deployment (auto on merge to main)
+  - Triggers automatically when code is pushed/merged to main branch
+  - Does NOT trigger on pull request events (only runs CI checks)
   - Includes post-deploy health check verification
   - Polls `/health` endpoint for up to 30 seconds
   - Dumps pm2 logs and fails deployment if health check doesn't pass

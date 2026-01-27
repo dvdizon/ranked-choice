@@ -245,7 +245,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           writeSecret,
           action: 'setAutoClose',
-          autoCloseAt: autoCloseAt || null
+          autoCloseAt: autoCloseAt ? new Date(autoCloseAt).toISOString() : null
         }),
       })
 
