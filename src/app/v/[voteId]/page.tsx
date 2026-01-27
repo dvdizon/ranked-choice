@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
   DndContext,
   closestCenter,
@@ -114,12 +114,13 @@ function DragOverlayItem({ option, index }: { option: string; index: number }) {
 export default function VotePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const voteId = params.voteId as string
 
   const [vote, setVote] = useState<Vote | null>(null)
   const [rankings, setRankings] = useState<string[]>([])
   const [unranked, setUnranked] = useState<string[]>([])
-  const [writeSecret, setWriteSecret] = useState('')
+  const [votingSecret, setVotingSecret] = useState('')
   const [voterName, setVoterName] = useState('')
   const [customOption, setCustomOption] = useState('')
   const [showCustomOption, setShowCustomOption] = useState(false)
@@ -154,6 +155,14 @@ export default function VotePage() {
       router.replace(`/v/${lower}`)
     }
   }, [voteId, router])
+
+  // Pre-fill voting secret from URL parameter
+  useEffect(() => {
+    const secretFromUrl = searchParams.get('secret')
+    if (secretFromUrl && !votingSecret) {
+      setVotingSecret(secretFromUrl)
+    }
+  }, [searchParams, votingSecret])
 
   // Shuffle array using Fisher-Yates algorithm
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -273,8 +282,8 @@ export default function VotePage() {
       return
     }
 
-    if (!writeSecret.trim()) {
-      setError('Write secret is required')
+    if (!votingSecret.trim()) {
+      setError('Voting secret is required')
       return
     }
 
@@ -291,7 +300,7 @@ export default function VotePage() {
         body: JSON.stringify({
           rankings,
           voterName: voterName.trim(),
-          writeSecret: writeSecret.trim(),
+          votingSecret: votingSecret.trim(),
           customOptions: customOptions.length > 0 ? customOptions : undefined,
         }),
       })
@@ -362,7 +371,7 @@ export default function VotePage() {
               setSuccess(false)
               setRankings(shuffleArray(vote.options))
               setUnranked([])
-              setWriteSecret('')
+              setVotingSecret('')
               setVoterName('')
             }}
           >
@@ -543,12 +552,12 @@ export default function VotePage() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="writeSecret">Write Secret</label>
+          <label htmlFor="votingSecret">Voting Secret</label>
           <input
             type="password"
-            id="writeSecret"
-            value={writeSecret}
-            onChange={(e) => setWriteSecret(e.target.value)}
+            id="votingSecret"
+            value={votingSecret}
+            onChange={(e) => setVotingSecret(e.target.value)}
             placeholder="Enter the secret to submit your ballot"
             required
           />

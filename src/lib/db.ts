@@ -69,6 +69,13 @@ try {
   // Column already exists, ignore error
 }
 
+// Migration: Add voting_secret_hash column if it doesn't exist
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN voting_secret_hash TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
 export default db
 
 export interface Vote {
@@ -76,6 +83,7 @@ export interface Vote {
   title: string
   options: string[]
   write_secret_hash: string
+  voting_secret_hash: string | null
   created_at: string
   closed_at: string | null
   auto_close_at: string | null
@@ -105,13 +113,14 @@ export function createVote(
   options: string[],
   writeSecretHash: string,
   voterNamesRequired: boolean = true,
-  autoCloseAt: string | null = null
+  autoCloseAt: string | null = null,
+  votingSecretHash: string | null = null
 ): Vote {
   const stmt = db.prepare(`
-    INSERT INTO votes (id, title, options, write_secret_hash, voter_names_required, auto_close_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO votes (id, title, options, write_secret_hash, voter_names_required, auto_close_at, voting_secret_hash)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `)
-  stmt.run(id, title, JSON.stringify(options), writeSecretHash, voterNamesRequired ? 1 : 0, autoCloseAt)
+  stmt.run(id, title, JSON.stringify(options), writeSecretHash, voterNamesRequired ? 1 : 0, autoCloseAt, votingSecretHash)
   return getVote(id)!
 }
 

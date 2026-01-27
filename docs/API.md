@@ -15,7 +15,12 @@ routes below with that base path (e.g., `/rcv/api/votes`).
 
 ### Vote Operations
 
-Most vote operations require a **write secret**. This is a per-vote secret generated when creating a vote and should be kept secure.
+Votes have two separate secrets:
+
+- **Admin Secret**: Required for managing the vote (closing, editing options, deleting ballots, accessing admin panel)
+- **Voting Secret**: Required for submitting ballots. Can be shared with voters via URL parameter (`?secret=...`)
+
+Both secrets are generated when creating a vote. Legacy votes that don't have a separate voting secret will accept the admin secret for ballot submission.
 
 ### Admin Operations
 
@@ -40,7 +45,8 @@ Create a new vote.
   "title": "Team Lunch Decision",
   "options": ["Pizza Palace", "Sushi Supreme", "Taco Town"],
   "voteId": "team-lunch-2026",  // optional, auto-generated if not provided
-  "writeSecret": "custom-secret",  // optional, auto-generated if not provided
+  "writeSecret": "custom-admin-secret",  // optional, auto-generated if not provided
+  "votingSecret": "custom-voting-secret",  // optional, auto-generated if not provided
   "voterNamesRequired": true,  // optional, default: true
   "autoCloseAt": "2026-01-26T18:00:00Z"  // optional, ISO 8601 datetime
 }
@@ -57,7 +63,9 @@ Create a new vote.
     "options": ["Pizza Palace", "Sushi Supreme", "Taco Town"],
     "created_at": "2026-01-25T12:00:00Z"
   },
-  "writeSecret": "xYz123AbC",  // Save this! Only shown once
+  "adminSecret": "xYz123AbC",  // Save this! For admin operations. Only shown once
+  "votingSecret": "aBc456DeF",  // Share with voters for ballot submission
+  "writeSecret": "xYz123AbC",  // Legacy field (same as adminSecret)
   "voteUrl": "/v/team-lunch-2026",
   "resultsUrl": "/v/team-lunch-2026/results"
 }
@@ -90,7 +98,8 @@ const response = await fetch('http://localhost:3100/api/votes', {
 
 const data = await response.json();
 console.log('Vote created:', data.voteUrl);
-console.log('Write secret:', data.writeSecret);
+console.log('Admin secret:', data.adminSecret);
+console.log('Voting secret:', data.votingSecret);
 ```
 
 ---
@@ -122,17 +131,20 @@ Retrieve vote information and ballot count.
 
 **POST** `/api/votes/:voteId/ballots`
 
-Submit a ballot (requires write secret).
+Submit a ballot (requires voting secret).
 
 **Request Body:**
 
 ```json
 {
   "rankings": ["Sushi Supreme", "Pizza Palace"],
-  "writeSecret": "xYz123AbC",
+  "votingSecret": "aBc456DeF",  // or "writeSecret" for legacy compatibility
   "voterName": "Alice"  // required if voter_names_required is true
 }
 ```
+
+**Note:** The voting secret can also be passed via URL parameter when sharing the vote link:
+`/v/team-lunch-2026?secret=aBc456DeF`
 
 **Response:**
 

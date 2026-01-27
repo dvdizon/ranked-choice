@@ -12,7 +12,9 @@ interface CreateVoteResponse {
     title: string
     options: string[]
   }
-  writeSecret: string
+  adminSecret: string
+  votingSecret: string
+  writeSecret: string // Legacy field
   voteUrl: string
   resultsUrl: string
   error?: string
@@ -112,6 +114,11 @@ export default function CreateVotePage() {
     const voteFullUrl = getFullUrl(votePath)
     const resultsFullUrl = getFullUrl(resultsPath)
     const adminFullUrl = getFullUrl(adminUrl)
+    const voteUrlWithSecret = `${voteFullUrl}?secret=${encodeURIComponent(createdVote.votingSecret)}`
+
+    const shareMessage = `Vote: ${createdVote.vote.title}
+Submit your vote: ${voteUrlWithSecret}
+View results: ${resultsFullUrl}`
 
     return (
       <div className="fade-in">
@@ -122,26 +129,55 @@ export default function CreateVotePage() {
           <p className="muted">{createdVote.vote.options.length} options</p>
         </div>
 
+        <div className="card" style={{ marginBottom: '1.5rem', backgroundColor: 'rgba(0, 128, 0, 0.05)' }}>
+          <h2>Share with Voters</h2>
+          <p className="muted" style={{ marginBottom: '0.75rem' }}>
+            Copy this message to share with your group. The voting secret is included in the link.
+          </p>
+          <div style={{
+            backgroundColor: 'var(--card-bg)',
+            padding: '1rem',
+            borderRadius: '4px',
+            border: '1px solid var(--border)',
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'inherit',
+            marginBottom: '0.75rem'
+          }}>
+            {shareMessage}
+          </div>
+          <CopyButton text={shareMessage} label="Copy share message" />
+        </div>
+
         <div className="secret-display">
-          <p><strong>Write Secret (save this!):</strong></p>
+          <p><strong>Admin Secret (save this!):</strong></p>
           <div className="copyable-field">
-            <span className="secret-value">{createdVote.writeSecret}</span>
-            <CopyButton text={createdVote.writeSecret} label="Copy secret" />
+            <span className="secret-value">{createdVote.adminSecret}</span>
+            <CopyButton text={createdVote.adminSecret} label="Copy admin secret" />
           </div>
           <p className="muted" style={{ marginTop: '0.5rem' }}>
-            Share this secret with voters so they can submit ballots.
-            You&apos;ll also need this to access the admin panel.
+            Use this to access the admin panel (manage ballots, close voting, delete vote).
             This will only be shown once.
+          </p>
+        </div>
+
+        <div className="secret-display">
+          <p><strong>Voting Secret:</strong></p>
+          <div className="copyable-field">
+            <span className="secret-value">{createdVote.votingSecret}</span>
+            <CopyButton text={createdVote.votingSecret} label="Copy voting secret" />
+          </div>
+          <p className="muted" style={{ marginTop: '0.5rem' }}>
+            Share this with voters so they can submit ballots. Already included in the share link above.
           </p>
         </div>
 
         <div className="card">
           <h2>Links</h2>
           <div style={{ marginBottom: '0.75rem' }}>
-            <p><strong>Vote page:</strong></p>
+            <p><strong>Vote page (with secret):</strong></p>
             <div className="copyable-field">
-              <a href={votePath} className="link-text">{voteFullUrl}</a>
-              <CopyButton text={voteFullUrl} label="Copy vote URL" />
+              <a href={`${votePath}?secret=${encodeURIComponent(createdVote.votingSecret)}`} className="link-text" style={{ wordBreak: 'break-all' }}>{voteUrlWithSecret}</a>
+              <CopyButton text={voteUrlWithSecret} label="Copy vote URL" />
             </div>
           </div>
           <div style={{ marginBottom: '0.75rem' }}>
@@ -158,7 +194,7 @@ export default function CreateVotePage() {
               <CopyButton text={adminFullUrl} label="Copy admin URL" />
             </div>
             <p className="muted" style={{ marginTop: '0.5rem' }}>
-              Use the write secret to access admin controls (delete vote, manage ballots, edit options).
+              Use the admin secret to access admin controls.
             </p>
           </div>
         </div>
@@ -272,7 +308,7 @@ export default function CreateVotePage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="customSecret">Custom Write Secret (optional)</label>
+              <label htmlFor="customSecret">Custom Admin Secret (optional)</label>
               <input
                 type="text"
                 id="customSecret"
@@ -281,8 +317,8 @@ export default function CreateVotePage() {
                 placeholder="Leave blank to auto-generate"
               />
               <p className="muted">
-                This secret is required to submit ballots.
-                Leave blank to auto-generate a secure one.
+                This secret is required to manage the vote (admin panel).
+                A separate voting secret will be auto-generated for ballot submission.
               </p>
             </div>
           </div>

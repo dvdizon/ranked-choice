@@ -11,7 +11,7 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, options, voteId: requestedId, writeSecret: requestedSecret, voterNamesRequired, autoCloseAt } = body
+    const { title, options, voteId: requestedId, writeSecret: requestedSecret, votingSecret: requestedVotingSecret, voterNamesRequired, autoCloseAt } = body
 
     // Validate title
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -73,9 +73,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate or use provided write secret
-    const writeSecret = requestedSecret && typeof requestedSecret === 'string' && requestedSecret.trim().length > 0
+    // Generate or use provided admin (write) secret
+    const adminSecret = requestedSecret && typeof requestedSecret === 'string' && requestedSecret.trim().length > 0
       ? requestedSecret.trim()
+      : generateWriteSecret()
+
+    // Generate or use provided voting secret (separate from admin secret)
+    const votingSecret = requestedVotingSecret && typeof requestedVotingSecret === 'string' && requestedVotingSecret.trim().length > 0
+      ? requestedVotingSecret.trim()
       : generateWriteSecret()
 
     // Validate autoCloseAt if provided
@@ -97,17 +102,19 @@ export async function POST(request: NextRequest) {
       validAutoCloseAt = autoCloseDate.toISOString()
     }
 
-    // Hash the secret for storage
-    const writeSecretHash = await hashSecret(writeSecret)
+    // Hash the secrets for storage
+    const adminSecretHash = await hashSecret(adminSecret)
+    const votingSecretHash = await hashSecret(votingSecret)
 
     // Create the vote
     const vote = createVote(
       voteId,
       title.trim(),
       cleanOptions,
-      writeSecretHash,
+      adminSecretHash,
       voterNamesRequired !== false, // Default to true if not specified
-      validAutoCloseAt
+      validAutoCloseAt,
+      votingSecretHash
     )
 
     return NextResponse.json({
@@ -118,7 +125,9 @@ export async function POST(request: NextRequest) {
         options: vote.options,
         created_at: vote.created_at,
       },
-      writeSecret, // Show once to creator
+      adminSecret,   // For managing the vote
+      votingSecret,  // For submitting ballots
+      writeSecret: adminSecret, // Legacy field for backwards compatibility
       voteUrl: `/v/${vote.id}`,
       resultsUrl: `/v/${vote.id}/results`,
     })

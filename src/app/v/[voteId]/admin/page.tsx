@@ -61,7 +61,7 @@ export default function AdminPage() {
       })
 
       if (!ballotsRes.ok) {
-        setError('Invalid write secret')
+        setError('Invalid admin secret')
         setLoading(false)
         return
       }
@@ -287,20 +287,21 @@ export default function AdminPage() {
       <div className="fade-in">
         <h1>Admin Panel</h1>
         <p className="muted" style={{ marginBottom: '1.5rem' }}>
-          Enter the write secret to access admin controls for this vote.
+          Enter the admin secret to access admin controls for this vote.
         </p>
 
         <form onSubmit={handleAuth}>
           <div className="form-group">
-            <label htmlFor="writeSecret">Write Secret</label>
+            <label htmlFor="writeSecret">Admin Secret</label>
             <input
               type="password"
               id="writeSecret"
               value={writeSecret}
               onChange={(e) => setWriteSecret(e.target.value)}
-              placeholder="Enter the write secret"
+              placeholder="Enter the admin secret"
               required
             />
+            <p className="muted">This is different from the voting secret shared with voters.</p>
           </div>
 
           {error && <p className="error" style={{ marginBottom: '1rem' }}>{error}</p>}
