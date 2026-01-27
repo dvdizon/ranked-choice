@@ -9,6 +9,7 @@ This document tracks work history, including what was implemented by AI agents a
 ## [Unreleased]
 
 ### Added
+- **MIT License** - Added LICENSE file with MIT license for open source distribution
 - **Skip CI Support** - CI workflow can be skipped by including `[skip ci]` or `[ci skip]` in commit message
   - Useful for documentation-only or trivial changes
   - Saves GitHub Actions minutes and avoids unnecessary builds
