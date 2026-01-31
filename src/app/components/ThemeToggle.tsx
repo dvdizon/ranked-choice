@@ -8,6 +8,7 @@ export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>('system')
   const [mounted, setMounted] = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setMounted(true)
     const saved = localStorage.getItem('theme') as Theme | null
@@ -15,6 +16,7 @@ export default function ThemeToggle() {
       setTheme(saved)
     }
   }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!mounted) return
