@@ -37,7 +37,6 @@ export default function CreateVotePage() {
   const [recurrenceStartAt, setRecurrenceStartAt] = useState('')
   const [integrationId, setIntegrationId] = useState('')
   const [integrationAdminSecret, setIntegrationAdminSecret] = useState('')
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [advancedTab, setAdvancedTab] = useState<'vote' | 'schedule' | 'notifications'>('vote')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -343,34 +342,14 @@ View results: ${resultsFullUrl}`
           </p>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="autoCloseAt">Auto-close voting (optional)</label>
-          <input
-            type="datetime-local"
-            id="autoCloseAt"
-            value={autoCloseAt}
-            onChange={(e) => setAutoCloseAt(e.target.value)}
-            disabled={recurrenceEnabled}
-          />
-          <p className="muted">
-            {recurrenceEnabled
-              ? 'For recurring votes, auto-close is calculated from the start time + duration.'
-              : 'Automatically close voting at this date and time. Leave blank to keep voting open indefinitely.'}
+        <div style={{ marginTop: '2rem', marginBottom: '1rem', paddingTop: '1.5rem', borderTop: '2px solid var(--border)' }}>
+          <h2 style={{ marginBottom: '0.5rem' }}>Advanced Options</h2>
+          <p className="muted" style={{ marginBottom: '1rem' }}>
+            Customize your vote with scheduling, custom IDs, and notifications.
           </p>
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            style={{ background: 'transparent', color: 'var(--accent)', padding: 0 }}
-          >
-            {showAdvanced ? '- Hide' : '+ Show'} advanced options
-          </button>
-        </div>
-
-        {showAdvanced && (
-          <div className="card">
+        <div className="card">
             <div className="tab-bar" role="tablist" aria-label="Advanced options">
               <button
                 type="button"
@@ -434,7 +413,6 @@ View results: ${resultsFullUrl}`
 
             {advancedTab === 'schedule' && (
               <div role="tabpanel" aria-label="Schedule settings">
-                <h3 style={{ marginTop: '0.5rem' }}>Recurring Schedule (optional)</h3>
                 <div className="form-group">
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                     <input
@@ -446,9 +424,23 @@ View results: ${resultsFullUrl}`
                   </label>
                   <p className="muted">
                     Recurring votes automatically create a new vote after the previous one closes.
-                    Requires a start time below.
                   </p>
                 </div>
+
+                {!recurrenceEnabled && (
+                  <div className="form-group">
+                    <label htmlFor="autoCloseAt">Auto-close voting (optional)</label>
+                    <input
+                      type="datetime-local"
+                      id="autoCloseAt"
+                      value={autoCloseAt}
+                      onChange={(e) => setAutoCloseAt(e.target.value)}
+                    />
+                    <p className="muted">
+                      Automatically close voting at this date and time. Leave blank to keep voting open indefinitely.
+                    </p>
+                  </div>
+                )}
 
                 {recurrenceEnabled && (
                   <>
@@ -555,7 +547,7 @@ View results: ${resultsFullUrl}`
             )}
 
           </div>
-        )}
+
         {error && <p className="error" style={{ marginBottom: '1rem' }}>{error}</p>}
 
         <button type="submit" disabled={loading}>
