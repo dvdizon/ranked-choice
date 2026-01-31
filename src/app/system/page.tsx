@@ -10,8 +10,24 @@ interface IntegrationSummary {
   type: 'discord' | 'slack' | 'webhook'
 }
 
+interface LiveVoteSummary {
+  id: string
+  title: string
+  options: string[]
+  created_at: string
+  auto_close_at: string | null
+  voter_names_required: boolean
+  period_days: number | null
+  vote_duration_hours: number | null
+  recurrence_start_at: string | null
+  recurrence_group_id: string | null
+  integration_id: number | null
+  recurrence_active: boolean
+}
+
 const WEBHOOK_STORAGE_KEY = 'rcv-discord-webhook-url'
 const NAME_STORAGE_KEY = 'rcv-discord-integration-name'
+const LIVE_VOTES_PAGE_SIZE = 10
 
 export default function SystemAdminPage() {
   const [integrationAdminSecret, setIntegrationAdminSecret] = useState('')
@@ -28,6 +44,12 @@ export default function SystemAdminPage() {
   const [integrationCreateError, setIntegrationCreateError] = useState('')
   const [integrationDeleteLoading, setIntegrationDeleteLoading] = useState(false)
   const [integrationDeleteError, setIntegrationDeleteError] = useState('')
+  const [liveVotes, setLiveVotes] = useState<LiveVoteSummary[]>([])
+  const [liveVotesLoading, setLiveVotesLoading] = useState(false)
+  const [liveVotesError, setLiveVotesError] = useState('')
+  const [liveVotesPage, setLiveVotesPage] = useState(1)
+  const [liveVotesTotalPages, setLiveVotesTotalPages] = useState(1)
+  const [liveVotesTotal, setLiveVotesTotal] = useState(0)
 
   useEffect(() => {
     try {
@@ -44,6 +66,45 @@ export default function SystemAdminPage() {
       // Ignore localStorage errors
     }
   }, [])
+
+  const loadLiveVotes = async (page: number = liveVotesPage) => {
+    if (!integrationAdminSecret.trim()) {
+      setLiveVotesError('Admin API secret is required to load live votes.')
+      return
+    }
+
+    setLiveVotesError('')
+    setLiveVotesLoading(true)
+
+    try {
+      const res = await fetch(withBasePath(`/api/admin/votes?page=${page}&pageSize=${LIVE_VOTES_PAGE_SIZE}`), {
+        headers: {
+          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
+        },
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setLiveVotesError(data.error || 'Failed to load live votes')
+        setLiveVotesLoading(false)
+        return
+      }
+
+      const loadedVotes = Array.isArray(data.votes) ? data.votes : []
+      const totalPages = Number.isFinite(Number(data.totalPages)) ? Number(data.totalPages) : 1
+      const totalVotes = Number.isFinite(Number(data.total)) ? Number(data.total) : loadedVotes.length
+      const currentPage = Number.isFinite(Number(data.page)) ? Number(data.page) : page
+
+      setLiveVotes(loadedVotes)
+      setLiveVotesPage(currentPage)
+      setLiveVotesTotalPages(totalPages)
+      setLiveVotesTotal(totalVotes)
+    } catch (err) {
+      setLiveVotesError('Network error while loading live votes.')
+    } finally {
+      setLiveVotesLoading(false)
+    }
+  }
 
   const loadIntegrations = async () => {
     if (!integrationAdminSecret.trim()) {
@@ -110,6 +171,7 @@ export default function SystemAdminPage() {
       }
 
       setAdminSecretValidated(true)
+      setLiveVotesPage(1)
       const loaded: IntegrationSummary[] = Array.isArray(data.integrations)
         ? data.integrations.map((integration: any) => ({
             id: integration.id,
@@ -123,6 +185,7 @@ export default function SystemAdminPage() {
       } else {
         setIntegrationsError('')
       }
+      await loadLiveVotes(1)
     } catch (err) {
       setAdminSecretValidationError('Network error while validating admin secret.')
     } finally {
@@ -233,6 +296,104 @@ export default function SystemAdminPage() {
     }
   }
 
+  const closeLiveVote = async (voteId: string) => {
+    if (!adminSecretValidated) {
+      setLiveVotesError('Admin secret validation is required.')
+      return
+    }
+
+    const confirmed = window.confirm('Close this vote? Voting will immediately stop.')
+    if (!confirmed) {
+      return
+    }
+
+    setLiveVotesError('')
+    setLiveVotesLoading(true)
+
+    try {
+      const res = await fetch(withBasePath(`/api/admin/votes/${voteId}`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
+        },
+        body: JSON.stringify({ action: 'close' }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setLiveVotesError(data.error || 'Failed to close vote')
+        setLiveVotesLoading(false)
+        return
+      }
+
+      await loadLiveVotes(liveVotesPage)
+    } catch (err) {
+      setLiveVotesError('Network error while closing vote.')
+    } finally {
+      setLiveVotesLoading(false)
+    }
+  }
+
+  const deleteLiveVote = async (voteId: string) => {
+    if (!adminSecretValidated) {
+      setLiveVotesError('Admin secret validation is required.')
+      return
+    }
+
+    const confirmed = window.confirm('Delete this vote? This will remove all ballots and cannot be undone.')
+    if (!confirmed) {
+      return
+    }
+
+    setLiveVotesError('')
+    setLiveVotesLoading(true)
+
+    try {
+      const res = await fetch(withBasePath(`/api/admin/votes/${voteId}`), {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
+        },
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setLiveVotesError(data.error || 'Failed to delete vote')
+        setLiveVotesLoading(false)
+        return
+      }
+
+      const nextPage = liveVotes.length === 1 && liveVotesPage > 1 ? liveVotesPage - 1 : liveVotesPage
+      setLiveVotesPage(nextPage)
+      await loadLiveVotes(nextPage)
+    } catch (err) {
+      setLiveVotesError('Network error while deleting vote.')
+    } finally {
+      setLiveVotesLoading(false)
+    }
+  }
+
+  const getVoteRecreateHref = (vote: LiveVoteSummary) => {
+    const params = new URLSearchParams()
+    params.set('title', vote.title)
+    params.set('options', vote.options.join('\n'))
+    params.set('voterNamesRequired', vote.voter_names_required ? '1' : '0')
+    if (vote.auto_close_at) {
+      params.set('autoCloseAt', vote.auto_close_at)
+    }
+    if (vote.period_days && vote.vote_duration_hours) {
+      params.set('recurrenceEnabled', '1')
+      params.set('periodDays', String(vote.period_days))
+      params.set('voteDurationHours', String(vote.vote_duration_hours))
+    }
+    if (vote.recurrence_start_at) {
+      params.set('recurrenceStartAt', vote.recurrence_start_at)
+    }
+    if (vote.integration_id) {
+      params.set('integrationId', String(vote.integration_id))
+    }
+    return `/?${params.toString()}`
+  }
+
   return (
     <div className="fade-in">
       <h1>System Admin</h1>
@@ -257,6 +418,11 @@ export default function SystemAdminPage() {
               setIntegrations([])
               setIntegrationsError('')
               setIntegrationId('')
+              setLiveVotes([])
+              setLiveVotesError('')
+              setLiveVotesPage(1)
+              setLiveVotesTotalPages(1)
+              setLiveVotesTotal(0)
             }}
             placeholder="Enter ADMIN_SECRET"
             className="input-large"
@@ -278,148 +444,263 @@ export default function SystemAdminPage() {
       </div>
 
       {adminSecretValidated && (
-        <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <div className="discord-heading">
-            <svg
-              className="discord-logo"
-              viewBox="0 0 127.14 96.36"
-              aria-hidden="true"
-            >
-              <path
-                fill="currentColor"
-                d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25,68.42,68.42,0,0,1,28.57,80c.93-.69,1.84-1.41,2.71-2.15a73.39,73.39,0,0,0,64.71,0c.87.74,1.78,1.46,2.71,2.15A68.68,68.68,0,0,1,87.66,85.24a77.1,77.1,0,0,0,6.89,11.12A105.25,105.25,0,0,0,126.72,80.2h0C129.27,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60.04,31,53.06S36,40.43,42.45,40.43c6.63,0,11.8,5.73,11.68,12.63C54.13,60,49,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60.04,73.25,53.06s5-12.63,11.44-12.63c6.63,0,11.8,5.73,11.68,12.63C96.37,60,91.29,65.69,84.69,65.69Z"
-              />
-            </svg>
-            <div>
-              <h3>Discord Integrations</h3>
-              <p className="muted">
-                Create a Discord webhook URL first, then create an integration via the admin API and use the returned ID.
-              </p>
-              <p className="muted">
-                <a
-                  href="https://github.com/dvdizon/ranked-choice/blob/main/docs/API.md#integrations-endpoints"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Admin API: Integrations endpoints
-                </a>
-              </p>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="integrationId">Discord Integration ID</label>
-            {integrations.length > 0 ? (
-              <select
-                id="integrationId"
-                value={integrationId}
-                onChange={(e) => setIntegrationId(e.target.value)}
-                className="input-large"
-              >
-                <option value="">Select an integration</option>
-                {integrations.map((integration) => (
-                  <option key={integration.id} value={String(integration.id)}>
-                    {integration.name} (#{integration.id}, {integration.type})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="number"
-                id="integrationId"
-                min={1}
-                step={1}
-                className="input-large"
-                value={integrationId}
-                onChange={(e) => setIntegrationId(e.target.value)}
-                placeholder="e.g., 1"
-              />
-            )}
-            <p className="muted">
-              Use this ID on the create vote page to attach notifications.
+        <>
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <h2>Live Votes</h2>
+            <p className="muted" style={{ marginBottom: '0.75rem' }}>
+              Monitor active votes and take action without individual admin secrets.
             </p>
-            <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setIntegrationId('')}
-                disabled={!integrationId}
-              >
-                Clear selection
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={deleteSelectedIntegration}
-                disabled={integrationDeleteLoading || !integrationId}
-              >
-                {integrationDeleteLoading ? 'Removing...' : 'Delete integration'}
-              </button>
-            </div>
-            {integrationDeleteError && (
-              <p className="error" style={{ marginTop: '0.5rem' }}>{integrationDeleteError}</p>
-            )}
-          </div>
 
-          <div className="form-group">
-            <div style={{ marginTop: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={loadIntegrations}
-                disabled={integrationsLoading}
+                onClick={() => loadLiveVotes(1)}
+                disabled={liveVotesLoading}
               >
-                {integrationsLoading ? 'Loading...' : 'Load integrations'}
+                {liveVotesLoading ? 'Loading...' : 'Refresh live votes'}
               </button>
-            </div>
-            {integrationsError && <p className="error" style={{ marginTop: '0.5rem' }}>{integrationsError}</p>}
-            {!integrationsError && integrations.length > 0 && (
-              <p className="muted" style={{ marginTop: '0.5rem' }}>
-                Loaded {integrations.length} integration{integrations.length === 1 ? '' : 's'}.
+              <p className="muted" style={{ margin: 0 }}>
+                Showing {liveVotes.length} of {liveVotesTotal} live vote{liveVotesTotal === 1 ? '' : 's'}.
               </p>
+            </div>
+
+            {liveVotesError && <p className="error" style={{ marginBottom: '0.75rem' }}>{liveVotesError}</p>}
+
+            {liveVotes.length === 0 && !liveVotesError && (
+              <p className="muted">No live votes found.</p>
+            )}
+
+            {liveVotes.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {liveVotes.map((vote) => (
+                  <div key={vote.id} className="card" style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div>
+                        <h3 style={{ marginBottom: '0.25rem' }}>{vote.title}</h3>
+                        <p className="muted" style={{ margin: 0 }}>
+                          ID: <strong>{vote.id}</strong> • {vote.options.length} options
+                        </p>
+                        <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                          Created: {new Date(vote.created_at).toLocaleString()}
+                        </p>
+                        {vote.auto_close_at && (
+                          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                            Auto-close: {new Date(vote.auto_close_at).toLocaleString()}
+                          </p>
+                        )}
+                        {vote.period_days && vote.vote_duration_hours && (
+                          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                            Recurs every {vote.period_days} days • Duration {vote.vote_duration_hours} hours
+                          </p>
+                        )}
+                        {vote.integration_id && (
+                          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                            Integration ID: {vote.integration_id}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => closeLiveVote(vote.id)}
+                          disabled={liveVotesLoading}
+                        >
+                          Close vote
+                        </button>
+                        <Link className="btn-secondary" href={getVoteRecreateHref(vote)}>
+                          Re-create vote
+                        </Link>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => deleteLiveVote(vote.id)}
+                          disabled={liveVotesLoading}
+                        >
+                          Delete vote
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      const nextPage = Math.max(1, liveVotesPage - 1)
+                      setLiveVotesPage(nextPage)
+                      void loadLiveVotes(nextPage)
+                    }}
+                    disabled={liveVotesPage <= 1 || liveVotesLoading}
+                  >
+                    Previous
+                  </button>
+                  <span className="muted">
+                    Page {liveVotesPage} of {liveVotesTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      const nextPage = Math.min(liveVotesTotalPages, liveVotesPage + 1)
+                      setLiveVotesPage(nextPage)
+                      void loadLiveVotes(nextPage)
+                    }}
+                    disabled={liveVotesPage >= liveVotesTotalPages || liveVotesLoading}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 
-          <div className="card" style={{ marginTop: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem' }}>Create Discord Integration</h4>
-            <div className="form-group">
-              <label htmlFor="integrationName">Integration name</label>
-              <input
-                type="text"
-                id="integrationName"
-                value={integrationName}
-                onChange={(e) => setIntegrationName(e.target.value)}
-                placeholder="e.g., Team Lunch Discord"
-                className="input-large"
-              />
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <div className="discord-heading">
+              <svg
+                className="discord-logo"
+                viewBox="0 0 127.14 96.36"
+                aria-hidden="true"
+              >
+                <path
+                  fill="currentColor"
+                  d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25,68.42,68.42,0,0,1,28.57,80c.93-.69,1.84-1.41,2.71-2.15a73.39,73.39,0,0,0,64.71,0c.87.74,1.78,1.46,2.71,2.15A68.68,68.68,0,0,1,87.66,85.24a77.1,77.1,0,0,0,6.89,11.12A105.25,105.25,0,0,0,126.72,80.2h0C129.27,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60.04,31,53.06S36,40.43,42.45,40.43c6.63,0,11.8,5.73,11.68,12.63C54.13,60,49,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60.04,73.25,53.06s5-12.63,11.44-12.63c6.63,0,11.8,5.73,11.68,12.63C96.37,60,91.29,65.69,84.69,65.69Z"
+                />
+              </svg>
+              <div>
+                <h3>Discord Integrations</h3>
+                <p className="muted">
+                  Create a Discord webhook URL first, then create an integration via the admin API and use the returned ID.
+                </p>
+                <p className="muted">
+                  <a
+                    href="https://github.com/dvdizon/ranked-choice/blob/main/docs/API.md#integrations-endpoints"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Admin API: Integrations endpoints
+                  </a>
+                </p>
+              </div>
             </div>
+
             <div className="form-group">
-              <label htmlFor="discordWebhookUrl">Discord webhook URL</label>
-              <input
-                type="url"
-                id="discordWebhookUrl"
-                value={discordWebhookUrl}
-                onChange={(e) => setDiscordWebhookUrl(e.target.value)}
-                placeholder="https://discord.com/api/webhooks/..."
-                className="input-large"
-              />
+              <label htmlFor="integrationId">Discord Integration ID</label>
+              {integrations.length > 0 ? (
+                <select
+                  id="integrationId"
+                  value={integrationId}
+                  onChange={(e) => setIntegrationId(e.target.value)}
+                  className="input-large"
+                >
+                  <option value="">Select an integration</option>
+                  {integrations.map((integration) => (
+                    <option key={integration.id} value={String(integration.id)}>
+                      {integration.name} (#{integration.id}, {integration.type})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="number"
+                  id="integrationId"
+                  min={1}
+                  step={1}
+                  className="input-large"
+                  value={integrationId}
+                  onChange={(e) => setIntegrationId(e.target.value)}
+                  placeholder="e.g., 1"
+                />
+              )}
               <p className="muted">
-                This will be validated by Discord before the integration is created.
+                Use this ID on the create vote page to attach notifications.
               </p>
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIntegrationId('')}
+                  disabled={!integrationId}
+                >
+                  Clear selection
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={deleteSelectedIntegration}
+                  disabled={integrationDeleteLoading || !integrationId}
+                >
+                  {integrationDeleteLoading ? 'Removing...' : 'Delete integration'}
+                </button>
+              </div>
+              {integrationDeleteError && (
+                <p className="error" style={{ marginTop: '0.5rem' }}>{integrationDeleteError}</p>
+              )}
             </div>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={createDiscordIntegration}
-              disabled={integrationCreateLoading}
-            >
-              {integrationCreateLoading ? 'Creating...' : 'Create Discord integration'}
-            </button>
-            {integrationCreateError && (
-              <p className="error" style={{ marginTop: '0.5rem' }}>{integrationCreateError}</p>
-            )}
+
+            <div className="form-group">
+              <div style={{ marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={loadIntegrations}
+                  disabled={integrationsLoading}
+                >
+                  {integrationsLoading ? 'Loading...' : 'Load integrations'}
+                </button>
+              </div>
+              {integrationsError && <p className="error" style={{ marginTop: '0.5rem' }}>{integrationsError}</p>}
+              {!integrationsError && integrations.length > 0 && (
+                <p className="muted" style={{ marginTop: '0.5rem' }}>
+                  Loaded {integrations.length} integration{integrations.length === 1 ? '' : 's'}.
+                </p>
+              )}
+            </div>
+
+            <div className="card" style={{ marginTop: '1rem' }}>
+              <h4 style={{ marginBottom: '0.5rem' }}>Create Discord Integration</h4>
+              <div className="form-group">
+                <label htmlFor="integrationName">Integration name</label>
+                <input
+                  type="text"
+                  id="integrationName"
+                  value={integrationName}
+                  onChange={(e) => setIntegrationName(e.target.value)}
+                  placeholder="e.g., Team Lunch Discord"
+                  className="input-large"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="discordWebhookUrl">Discord webhook URL</label>
+                <input
+                  type="url"
+                  id="discordWebhookUrl"
+                  value={discordWebhookUrl}
+                  onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  className="input-large"
+                />
+                <p className="muted">
+                  This will be validated by Discord before the integration is created.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={createDiscordIntegration}
+                disabled={integrationCreateLoading}
+              >
+                {integrationCreateLoading ? 'Creating...' : 'Create Discord integration'}
+              </button>
+              {integrationCreateError && (
+                <p className="error" style={{ marginTop: '0.5rem' }}>{integrationCreateError}</p>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <div style={{ marginTop: '1rem' }}>

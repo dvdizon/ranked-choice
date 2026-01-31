@@ -133,11 +133,14 @@ You'll receive three URLs:
    - Set or change auto-close date/time
    - Edit vote options (removes deleted options from existing ballots)
 
-### System Admin (Integrations)
+### System Admin
 
 1. Go to `/system`
 2. Enter the `ADMIN_SECRET`
-3. Manage integrations:
+3. Manage live votes:
+   - Review a paginated list of open votes
+   - Close voting, delete votes, or re-create votes with pre-filled fields
+4. Manage integrations:
    - Create a new Discord integration (webhook URL required)
    - Load and delete existing integrations
    - Copy the integration ID for use when creating a vote
@@ -385,5 +388,4 @@ If you are using Claude Code or another AI coding agent, start there.
 ## License
 
 MIT License. See `LICENSE`.
-
 
