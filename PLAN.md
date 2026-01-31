@@ -304,6 +304,7 @@ All meaningful behavior changes must be logged here.
 - 2026-01-31 — Moved system integration management to a dedicated /system admin page
 - 2026-01-31 — Moved Discord notification inputs into the advanced options tab on create vote
 - 2026-02-01 — Added system admin live votes list with close/delete actions and re-create links
+- 2026-01-31 — Styled system admin re-create vote action to match button UI
 
 ---
 

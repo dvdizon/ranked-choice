@@ -29,6 +29,7 @@ This document tracks work history, including what was implemented by AI agents a
 - **System Admin UI** - Moved system-level integration management to a dedicated `/system` page and linked to it from vote creation
 - **Create Vote UI** - Moved Discord notification inputs into the advanced options tab (integration ID + admin API secret)
 - **Decision Records** - Moved decision records out of `PLAN.md` into `docs/decisions/`
+- **System Admin UI** - Styled the re-create vote action to match the rest of the button UI for clearer live vote actions
 
 ---
 
@@ -344,6 +345,5 @@ This project uses semantic versioning:
 - **Human**: David (project owner, planning, decisions)
 - **AI Agent**: Initial MVP implementation (Phases 1-3)
 - **AI Agent**: Repository cleanup and CI/CD setup (current)
-
 
 
