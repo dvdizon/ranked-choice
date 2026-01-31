@@ -8,13 +8,65 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+- **System Admin UI** - Moved system-level integration management to a dedicated `/system` page and linked to it from vote creation
+- **Create Vote UI** - Moved Discord notification inputs into the advanced options tab (integration ID + admin API secret)
+- **Decision Records** - Moved decision records out of `PLAN.md` into `docs/decisions/`
+
+---
+
+## [0.5.0] - 2026-01-31
+
 ### Added
 - **MIT License** - Added LICENSE file with MIT license for open source distribution
 - **Skip CI Support** - CI workflow can be skipped by including `[skip ci]` or `[ci skip]` in commit message
   - Useful for documentation-only or trivial changes
   - Saves GitHub Actions minutes and avoids unnecessary builds
+- **Create Vote UI Enhancements**
+  - Added recurring schedule fields (period + duration) under advanced options
+  - Added Discord integration selection with webhook setup links
+  - Introduced Vote/Schedule/Integrations tabs to keep advanced options manageable
+- **Recurring Schedule Start Time** - Specify a start day/time so recurring votes open at a defined moment and close after the configured duration
+- **Periodic/Recurring Votes** - Create votes that automatically repeat on a schedule
+  - Minimum period of 7 days (weekly)
+  - Configurable vote duration (how long voting stays open)
+  - When a recurring vote auto-closes, a new instance is automatically created
+  - All votes in a recurrence group share the same settings and history
+  - Background scheduler (node-cron) handles automatic vote creation
+  - Protection limits to prevent server overload:
+    - `MAX_RECURRING_VOTES_PER_TICK` (default: 10) - Max new votes created per scheduler tick
+    - `MAX_ACTIVE_RECURRING_GROUPS` (default: 100) - Max active recurring vote groups system-wide
+  - Admin functions for managing recurring votes:
+    - `updateRecurringVoteTemplate()` - Update settings for future vote instances
+    - `stopRecurringVoteGroup()` - Stop a recurring vote from creating new instances
+    - `getVotesInRecurrenceGroup()` - View all historical vote instances
+- **Discord Integration** - First-party messaging platform integration
+  - Connect Discord webhooks to receive vote notifications
+  - Notifications sent when votes are created and when voting closes
+  - Notifications include vote title, voting link, results link, and winner
+  - Designed for extensibility (Slack and generic webhooks also supported)
+- **Integrations API** - Admin endpoints for managing messaging integrations
+  - `POST /api/integrations` - Create a new integration
+  - `GET /api/integrations` - List all integrations
+  - `DELETE /api/integrations/:id` - Delete an integration
+  - Requires ADMIN_SECRET authentication
 
 ### Changed
+- **Build Stability** - Use an in-memory SQLite database during Next.js production build to avoid SQLITE_BUSY errors
+- **Integrations API** - Renamed `adminSecret` field to `integrationAdminSecret` when attaching integrations during vote creation
+- **System Options UI** - Added hideable system options and require admin-secret validation before showing integration controls
+- **Integration Management** - Added UI controls to clear or delete a Discord integration
+- **Discord Integration UI Copy** - Clarified that a webhook URL is used to create an integration, and the UI now links to the integrations API docs
+- **Discord Integration UI** - Added an in-app panel to create Discord integrations using the admin API
+- **Discord Integration UI Access** - Moved Discord integration controls into a System Options section gated by the admin API secret
+- **Integration Attachments** - Creating a vote with an integration now requires the admin API secret
+- **Env Documentation** - Added `ADMIN_SECRET` to `.env` and `.env.example`
+- **CI Node Version** - CI now uses Node.js 20.9+ to satisfy Next.js 16 requirements
+- **Lint Configuration**
+  - Migrated to ESLint flat config (`eslint.config.js`)
+  - Updated `npm run lint` to use ESLint directly with the flat config
+- **Next.js Configuration**
+  - Replaced deprecated `experimental.serverComponentsExternalPackages` with `serverExternalPackages`
+  - Removed obsolete `experimental.instrumentationHook` flag
 - **README Documentation** - Updated to reflect current project state
   - Removed outdated GitLab CI references (replaced with GitHub Actions in v0.2.0)
   - Updated CI/CD section to reflect auto-deployment on merge to main (v0.3.1)

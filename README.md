@@ -31,7 +31,7 @@ It uses **Instant-Runoff Voting (IRV)**:
 ## Quick Start (Local Development)
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20.9+
 - npm
 
 ### Setup
@@ -72,12 +72,22 @@ npm test
    - **Required**: Voters must provide their name (good for coordination)
    - **Optional**: Anonymous voting allowed
 5. Optionally set an auto-close date/time (voting will automatically close at this time)
-6. Optionally set custom secrets (under advanced options):
+6. Optionally set recurring schedule settings (under advanced options → Schedule tab):
+   - Start date/time (when voting opens)
+   - Enable recurring votes (min 7-day period)
+   - Set vote duration (hours) for each recurring instance
+7. Optionally manage Discord integrations on the System Admin page (`/system`):
+   - Validate `ADMIN_SECRET` to access integration controls
+   - Create integrations and copy the integration ID
+8. Optionally attach Discord notifications (under advanced options → Notifications tab):
+   - Enter a Discord integration ID (from System Admin)
+   - Provide the admin API secret to attach notifications
+9. Optionally set custom secrets (under advanced options → Vote tab):
    - **Admin Secret**: For managing the vote (admin panel, editing, deleting)
    - **Voting Secret**: For submitting ballots (share with voters)
    - **Vote ID**: Custom short identifier (e.g., `team-lunch`)
-7. Click "Create Vote"
-8. **Save both secrets!** They're shown only once:
+10. Click "Create Vote"
+11. **Save both secrets!** They're shown only once:
    - **Admin Secret**: Required for admin panel access
    - **Voting Secret**: Required for ballot submission (can be shared widely)
 
@@ -122,6 +132,15 @@ You'll receive three URLs:
    - Reopen voting (allows new submissions again)
    - Set or change auto-close date/time
    - Edit vote options (removes deleted options from existing ballots)
+
+### System Admin (Integrations)
+
+1. Go to `/system`
+2. Enter the `ADMIN_SECRET`
+3. Manage integrations:
+   - Create a new Discord integration (webhook URL required)
+   - Load and delete existing integrations
+   - Copy the integration ID for use when creating a vote
 
 ### Programmatic Access (API)
 
@@ -232,7 +251,7 @@ See `.github/workflows/ci.yml` for full configuration details.
 
 ## Architecture
 
-- **Framework:** Next.js 14 (App Router)
+- **Framework:** Next.js 16 (App Router)
 - **Database:** SQLite via better-sqlite3
 - **Process manager:** pm2
 - **Reverse proxy:** nginx
@@ -244,6 +263,8 @@ See `.github/workflows/ci.yml` for full configuration details.
 - **Opt-Out Voting UX**: All options pre-ranked; remove unwanted choices
 - **Custom Options**: Voters can suggest new options dynamically
 - **Auto-Close**: Set automatic voting deadline with date/time picker
+- **Recurring Votes**: Schedule votes to repeat on a weekly-or-longer cadence
+- **Discord Notifications**: Send vote created/closed messages via Discord webhooks
 - **Flexible Anonymity**: Vote creators choose whether names are required (default) or optional for anonymous voting
 - **Separate Admin and Voting Secrets**: Two distinct secrets for better access control
   - Admin secret for vote management (admin panel, editing, deleting)
@@ -260,6 +281,7 @@ See `.github/workflows/ci.yml` for full configuration details.
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── page.tsx           # Home / Create vote
+│   ├── system/            # System admin (integrations)
 │   ├── v/[voteId]/        # Vote pages
 │   │   ├── page.tsx       # Ballot submission (opt-out UX, custom options)
 │   │   ├── results/       # Results with voter names
@@ -318,7 +340,7 @@ It contains:
 - Deployment constraints (DigitalOcean, nginx, pm2, SQLite)
 - Execution phases and current status
 - Open questions for discussion
-- Decision Records (append-only)
+- Decision Records (append-only, stored in `docs/decisions/`)
 
 If something isn't in `PLAN.md`, it should be questioned before implementation.
 
@@ -353,7 +375,7 @@ If you are using Claude Code or another AI coding agent, start there.
 
 ## Contributing & Decisions
 
-- Non-trivial changes should be discussed and captured as **Decision Records** in `PLAN.md`
+- Non-trivial changes should be discussed and captured as **Decision Records** in `docs/decisions/`
 - Decision history is append-only
 - If unsure, document instead of changing behavior
 - See [docs/refactor-opportunities.md](docs/refactor-opportunities.md) for improvement ideas
@@ -362,7 +384,6 @@ If you are using Claude Code or another AI coding agent, start there.
 
 ## License
 
-This project is intended for personal / small-group use.
-License to be added if/when needed.
+MIT License. See `LICENSE`.
 
 

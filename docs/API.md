@@ -48,7 +48,13 @@ Create a new vote.
   "writeSecret": "custom-admin-secret",  // optional, auto-generated if not provided
   "votingSecret": "custom-voting-secret",  // optional, auto-generated if not provided
   "voterNamesRequired": true,  // optional, default: true
-  "autoCloseAt": "2026-01-26T18:00:00Z"  // optional, ISO 8601 datetime
+  "autoCloseAt": "2026-01-26T18:00:00Z",  // optional, ISO 8601 datetime
+  "recurrenceEnabled": true,  // optional, enable recurring votes
+  "recurrenceStartAt": "2026-02-01T17:00:00Z",  // optional, required if recurrenceEnabled
+  "periodDays": 7,  // optional, minimum 7 (required if recurrenceEnabled)
+  "voteDurationHours": 24,  // optional, minimum 1 (required if recurrenceEnabled)
+  "integrationId": 3,  // optional, Discord integration ID
+  "integrationAdminSecret": "ADMIN_SECRET"  // required if integrationId is provided
 }
 ```
 
@@ -79,7 +85,13 @@ curl -X POST http://localhost:3100/api/votes \
   -d '{
     "title": "Friday Lunch",
     "options": ["Pizza", "Sushi", "Tacos"],
-    "autoCloseAt": "2026-01-26T18:00:00Z"
+    "autoCloseAt": "2026-01-26T18:00:00Z",
+    "recurrenceEnabled": true,
+    "recurrenceStartAt": "2026-02-01T17:00:00Z",
+    "periodDays": 7,
+    "voteDurationHours": 24,
+    "integrationId": 3,
+    "integrationAdminSecret": "ADMIN_SECRET"
   }'
 ```
 
@@ -92,7 +104,13 @@ const response = await fetch('http://localhost:3100/api/votes', {
   body: JSON.stringify({
     title: 'Friday Lunch',
     options: ['Pizza', 'Sushi', 'Tacos'],
-    autoCloseAt: '2026-01-26T18:00:00Z'
+    autoCloseAt: '2026-01-26T18:00:00Z',
+    recurrenceEnabled: true,
+    recurrenceStartAt: '2026-02-01T17:00:00Z',
+    periodDays: 7,
+    voteDurationHours: 24,
+    integrationId: 3,
+    integrationAdminSecret: 'ADMIN_SECRET'
   })
 });
 
@@ -447,6 +465,100 @@ Authorization: Bearer <ADMIN_SECRET>
 
 ---
 
+## Integrations Endpoints
+
+These endpoints require the `ADMIN_SECRET` environment variable to be set and provided in the Authorization header.
+
+### Create Integration
+
+**POST** `/api/integrations`
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Request Body (Discord):**
+
+```json
+{
+  "type": "discord",
+  "name": "Team Lunch Discord",
+  "config": {
+    "webhook_url": "https://discord.com/api/webhooks/..."
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "integration": {
+    "id": 3,
+    "name": "Team Lunch Discord",
+    "type": "discord",
+    "config": {
+      "webhook_url": "https://discord.com/..."
+    },
+    "created_at": "2026-01-31T20:00:00Z"
+  }
+}
+```
+
+---
+
+### List Integrations
+
+**GET** `/api/integrations`
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Response:**
+
+```json
+{
+  "integrations": [
+    {
+      "id": 3,
+      "name": "Team Lunch Discord",
+      "type": "discord",
+      "config": {
+        "webhook_url": "https://discord.com/..."
+      },
+      "created_at": "2026-01-31T20:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Delete Integration
+
+**DELETE** `/api/integrations/:id`
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
 ## Error Responses
 
 All endpoints return errors in the following format:
@@ -474,6 +586,8 @@ Common HTTP status codes:
 | `PORT` | Server port (default: 3100) | No |
 | `DATABASE_PATH` | SQLite database path | No |
 | `ADMIN_SECRET` | Secret for admin API endpoints | Yes (for admin endpoints) |
+| `MAX_RECURRING_VOTES_PER_TICK` | Max new recurring votes per scheduler tick (default: 10) | No |
+| `MAX_ACTIVE_RECURRING_GROUPS` | Max active recurring vote groups system-wide (default: 100) | No |
 
 ---
 
