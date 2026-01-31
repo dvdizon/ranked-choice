@@ -135,7 +135,7 @@ When creating a new release:
 - Local dev path: `./data/rcv.sqlite`
 
 #### Schema
-- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voting_secret_plaintext` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
 - **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
 - **api_keys table**: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
 - **integrations table**: `id`, `type` (discord/slack/webhook), `name`, `config` (JSON), `created_at`
@@ -143,6 +143,7 @@ When creating a new release:
 **Note on secrets:** Votes have two separate secrets:
 - `write_secret_hash` (admin secret): For managing the vote (admin panel, editing, deleting)
 - `voting_secret_hash`: For submitting ballots. If NULL, falls back to `write_secret_hash` for backwards compatibility
+- `voting_secret_plaintext`: Plaintext voting secret stored only for recurring votes with integrations (enables Discord notifications to include voting link with secret)
 
 **Note on recurring votes:** Votes can be configured to recur automatically:
 - `period_days`: How often (in days) a new vote instance is created (min 7)

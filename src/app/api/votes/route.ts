@@ -238,6 +238,7 @@ export async function POST(request: NextRequest) {
         recurrenceGroupId,
         integrationId: validIntegrationId,
         recurrenceActive,
+        votingSecretPlaintext: validIntegrationId !== null ? votingSecret : null,
       }
     )
 
