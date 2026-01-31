@@ -4,7 +4,7 @@ Guidelines for AI agents and contributors working on the Ranked Choice Voting Ap
 
 ## Project Overview
 
-A self-hosted Ranked Choice Voting web app for small groups. Built with Next.js 14 (App Router), TypeScript, and SQLite.
+A self-hosted Ranked Choice Voting web app for small groups. Built with Next.js 16 (App Router), TypeScript, and SQLite.
 
 ## Quick Reference
 
@@ -40,6 +40,7 @@ npm run test:watch   # Tests in watch mode
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── page.tsx           # Home / Create vote
+│   ├── system/            # System admin (integrations)
 │   ├── v/[voteId]/        # Vote and results pages
 │   │   ├── page.tsx       # Voting page (opt-out UX, custom options)
 │   │   ├── results/       # Results with voter names
@@ -74,6 +75,7 @@ deploy/
 - TypeScript strict mode
 - Pure functions where possible (especially business logic)
 - Keep components focused and simple
+- ESLint uses flat config (`eslint.config.js`)
 
 ### Testing
 - IRV algorithm has comprehensive unit tests
@@ -83,7 +85,7 @@ deploy/
 ### Documentation Requirements
 **CRITICAL:** Before committing any code changes, you MUST update all relevant documentation:
 - **CHANGELOG.md** - Document all changes in the Unreleased section
-- **PLAN.md** - Update functional scope, change log, and add Decision Records for behavioral changes
+- **PLAN.md** - Update functional scope and change log; record behavior decisions in `docs/decisions/`
 - **README.md** - Update usage instructions and key features if user-facing changes
 - **CLAUDE.md** - Update schema, features, or guidelines if architecture changes
 
@@ -133,23 +135,34 @@ When creating a new release:
 - Local dev path: `./data/rcv.sqlite`
 
 #### Schema
-- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
 - **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
 - **api_keys table**: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
+- **integrations table**: `id`, `type` (discord/slack/webhook), `name`, `config` (JSON), `created_at`
 
 **Note on secrets:** Votes have two separate secrets:
 - `write_secret_hash` (admin secret): For managing the vote (admin panel, editing, deleting)
 - `voting_secret_hash`: For submitting ballots. If NULL, falls back to `write_secret_hash` for backwards compatibility
 
+**Note on recurring votes:** Votes can be configured to recur automatically:
+- `period_days`: How often (in days) a new vote instance is created (min 7)
+- `vote_duration_hours`: How long each vote stays open before auto-closing
+- `recurrence_group_id`: Links related vote instances together
+- `integration_id`: Optional link to messaging integration for notifications
+
 #### Key Functions
 - Vote CRUD: `createVote`, `getVote`, `deleteVote`, `voteExists`
-- Vote management: `closeVote`, `reopenVote`, `updateVoteOptions`, `appendVoteOptions`, `setAutoCloseAt`
+- Vote management: `closeVote`, `reopenVote`, `updateVoteOptions`, `appendVoteOptions`, `setAutoCloseAt`, `setVoteRecurrence`
+- Recurring votes: `createNextRecurringVote`, `getLatestVoteInRecurrenceGroup`, `getRecurringVotesNeedingNewInstance`, `stopRecurringVoteGroup`, `countActiveRecurringVoteGroups`, `getVotesInRecurrenceGroup`, `updateRecurringVoteTemplate`
 - Ballot operations: `createBallot`, `getBallot`, `getBallotsByVoteId`, `deleteBallot`, `countBallots`
 - API key operations: `createApiKey`, `getApiKeyById`, `getApiKeyByHash`, `getAllApiKeys`, `updateApiKeyLastUsed`, `deleteApiKey`
+- Integration operations: `createIntegration`, `getIntegrationById`, `getAllIntegrations`, `updateIntegration`, `deleteIntegration`
+- Scheduler helpers: `canCreateRecurringVote`, `getRecurringVoteLimits`
 
 ### API Routes
 - REST endpoints under `/api/votes/` - See `docs/API.md` for comprehensive API documentation
 - Admin endpoints under `/api/admin/` - Requires `ADMIN_SECRET` environment variable
+- Integrations endpoints under `/api/integrations/` - Requires `ADMIN_SECRET` authentication
 - Health check endpoint at `/api/health` - Returns `{"status": "ok"}` for deployment verification
 - JSON request/response bodies
 - Write operations require vote secret
@@ -162,6 +175,10 @@ PORT=3100                              # Required
 DATABASE_PATH=/var/lib/rcv-lunch/rcv.sqlite  # Production
 BASE_URL=https://your-domain.com       # Optional
 ADMIN_SECRET=                          # Optional - enables admin API endpoints for API key management
+
+# Recurring vote protection limits
+MAX_RECURRING_VOTES_PER_TICK=10        # Max new votes created per scheduler tick (default: 10)
+MAX_ACTIVE_RECURRING_GROUPS=100        # Max active recurring vote groups system-wide (default: 100)
 ```
 
 ### Base Path Assumption
@@ -226,6 +243,7 @@ location /health {
 | `PLAN.md` | Source of truth for requirements and RCV rules |
 | `CLAUDE.md` | This file - development guidelines |
 | `docs/API.md` | REST API documentation for programmatic access |
+| `docs/decisions/README.md` | Decision record index and template |
 | `docs/refactor-opportunities.md` | Deferred improvements |
 | `docs/CHANGELOG.md` | Work history and changes |
 
@@ -261,7 +279,7 @@ location /health {
 
 ## RCV Rules (Authoritative)
 
-From PLAN.md - do not modify without recording a Decision Record:
+From PLAN.md - do not modify without recording a Decision Record in `docs/decisions/`:
 
 - **Method**: Instant-Runoff Voting (IRV)
 - **Majority**: >50% of active (non-exhausted) ballots

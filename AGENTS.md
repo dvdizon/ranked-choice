@@ -9,7 +9,8 @@ Use this file as the default operating checklist for Codex in this repo.
 ## Documentation Sync (Required Before Commit)
 Update all relevant docs for any change:
 - `docs/CHANGELOG.md` (Unreleased)
-- `PLAN.md` (Change Log + Decision Records for behavior changes)
+- `PLAN.md` (Change Log for behavior changes)
+- `docs/decisions/` (Decision Records)
 - `README.md` (user-facing updates)
 - `CLAUDE.md` (architecture, conventions, or new files)
 - `docs/` files that describe affected behavior (ex: `docs/API.md`)

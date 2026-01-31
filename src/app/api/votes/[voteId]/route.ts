@@ -34,6 +34,7 @@ export async function GET(
       created_at: vote.created_at,
       closed_at: vote.closed_at,
       auto_close_at: vote.auto_close_at,
+      recurrence_start_at: vote.recurrence_start_at,
       voter_names_required: vote.voter_names_required,
       ballotCount,
     })
@@ -184,6 +185,7 @@ export async function PATCH(
         created_at: updatedVote!.created_at,
         closed_at: updatedVote!.closed_at,
         auto_close_at: updatedVote!.auto_close_at,
+        recurrence_start_at: updatedVote!.recurrence_start_at,
         voter_names_required: updatedVote!.voter_names_required,
         ballotCount,
       },

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import CopyButton from './components/CopyButton'
 import { withBasePath } from '@/lib/paths'
 
@@ -30,7 +31,14 @@ export default function CreateVotePage() {
   const [customSecret, setCustomSecret] = useState('')
   const [voterNamesRequired, setVoterNamesRequired] = useState(true)
   const [autoCloseAt, setAutoCloseAt] = useState('')
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false)
+  const [periodDays, setPeriodDays] = useState('7')
+  const [voteDurationHours, setVoteDurationHours] = useState('24')
+  const [recurrenceStartAt, setRecurrenceStartAt] = useState('')
+  const [integrationId, setIntegrationId] = useState('')
+  const [integrationAdminSecret, setIntegrationAdminSecret] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [advancedTab, setAdvancedTab] = useState<'vote' | 'schedule' | 'notifications'>('vote')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [createdVote, setCreatedVote] = useState<CreateVoteResponse | null>(null)
@@ -42,6 +50,7 @@ export default function CreateVotePage() {
       if (savedOptions) {
         setOptionsText(savedOptions)
       }
+
     } catch (err) {
       // Ignore localStorage errors (e.g., disabled cookies)
     }
@@ -63,7 +72,59 @@ export default function CreateVotePage() {
       return
     }
 
+    let parsedPeriodDays: number | undefined
+    let parsedVoteDurationHours: number | undefined
+    let parsedRecurrenceStartAt: Date | undefined
+    if (recurrenceEnabled) {
+      if (!recurrenceStartAt) {
+        setError('Start date/time is required for recurring votes.')
+        setLoading(false)
+        return
+      }
+
+      parsedRecurrenceStartAt = new Date(recurrenceStartAt)
+      if (Number.isNaN(parsedRecurrenceStartAt.getTime())) {
+        setError('Start date/time must be valid.')
+        setLoading(false)
+        return
+      }
+
+      parsedPeriodDays = Number.parseInt(periodDays, 10)
+      if (!Number.isInteger(parsedPeriodDays) || parsedPeriodDays < 7) {
+        setError('Recurring period must be at least 7 days.')
+        setLoading(false)
+        return
+      }
+
+      parsedVoteDurationHours = Number.parseInt(voteDurationHours, 10)
+      if (!Number.isInteger(parsedVoteDurationHours) || parsedVoteDurationHours < 1) {
+        setError('Vote duration must be at least 1 hour.')
+        setLoading(false)
+        return
+      }
+    }
+
+    let parsedIntegrationId: number | undefined
+    if (integrationId.trim()) {
+      if (!integrationAdminSecret.trim()) {
+        setError('Admin API secret is required to attach a Discord integration.')
+        setLoading(false)
+        return
+      }
+
+      parsedIntegrationId = Number.parseInt(integrationId, 10)
+      if (!Number.isInteger(parsedIntegrationId) || parsedIntegrationId <= 0) {
+        setError('Integration ID must be a positive integer.')
+        setLoading(false)
+        return
+      }
+    }
+
     try {
+      const autoCloseIso = recurrenceEnabled && parsedRecurrenceStartAt && parsedVoteDurationHours
+        ? new Date(parsedRecurrenceStartAt.getTime() + parsedVoteDurationHours * 60 * 60 * 1000).toISOString()
+        : (autoCloseAt ? new Date(autoCloseAt).toISOString() : undefined)
+
       const res = await fetch(withBasePath('/api/votes'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,7 +134,13 @@ export default function CreateVotePage() {
           voteId: customId || undefined,
           writeSecret: customSecret || undefined,
           voterNamesRequired,
-          autoCloseAt: autoCloseAt ? new Date(autoCloseAt).toISOString() : undefined,
+          autoCloseAt: autoCloseIso,
+          recurrenceEnabled: recurrenceEnabled || undefined,
+          periodDays: recurrenceEnabled ? parsedPeriodDays : undefined,
+          voteDurationHours: recurrenceEnabled ? parsedVoteDurationHours : undefined,
+          integrationId: parsedIntegrationId,
+          recurrenceStartAt: recurrenceEnabled ? parsedRecurrenceStartAt?.toISOString() : undefined,
+          integrationAdminSecret: parsedIntegrationId ? integrationAdminSecret.trim() : undefined,
         }),
       })
 
@@ -213,6 +280,12 @@ View results: ${resultsFullUrl}`
               setCustomSecret('')
               setVoterNamesRequired(true)
               setAutoCloseAt('')
+              setRecurrenceEnabled(false)
+              setPeriodDays('7')
+              setVoteDurationHours('24')
+              setRecurrenceStartAt('')
+              setIntegrationId('')
+              setIntegrationAdminSecret('')
             }}
           >
             Create Another
@@ -277,9 +350,12 @@ View results: ${resultsFullUrl}`
             id="autoCloseAt"
             value={autoCloseAt}
             onChange={(e) => setAutoCloseAt(e.target.value)}
+            disabled={recurrenceEnabled}
           />
           <p className="muted">
-            Automatically close voting at this date and time. Leave blank to keep voting open indefinitely.
+            {recurrenceEnabled
+              ? 'For recurring votes, auto-close is calculated from the start time + duration.'
+              : 'Automatically close voting at this date and time. Leave blank to keep voting open indefinitely.'}
           </p>
         </div>
 
@@ -295,35 +371,191 @@ View results: ${resultsFullUrl}`
 
         {showAdvanced && (
           <div className="card">
-            <div className="form-group">
-              <label htmlFor="customId">Custom Vote ID (optional)</label>
-              <input
-                type="text"
-                id="customId"
-                value={customId}
-                onChange={(e) => setCustomId(e.target.value)}
-                placeholder="e.g., team-lunch"
-              />
-              <p className="muted">Lowercase letters, numbers, and dashes. Leave blank to auto-generate.</p>
+            <div className="tab-bar" role="tablist" aria-label="Advanced options">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={advancedTab === 'vote'}
+                className={`tab-button ${advancedTab === 'vote' ? 'tab-active' : ''}`}
+                onClick={() => setAdvancedTab('vote')}
+              >
+                Vote
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={advancedTab === 'schedule'}
+                className={`tab-button ${advancedTab === 'schedule' ? 'tab-active' : ''}`}
+                onClick={() => setAdvancedTab('schedule')}
+              >
+                Schedule
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={advancedTab === 'notifications'}
+                className={`tab-button ${advancedTab === 'notifications' ? 'tab-active' : ''}`}
+                onClick={() => setAdvancedTab('notifications')}
+              >
+                Notifications
+              </button>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="customSecret">Custom Admin Secret (optional)</label>
-              <input
-                type="text"
-                id="customSecret"
-                value={customSecret}
-                onChange={(e) => setCustomSecret(e.target.value)}
-                placeholder="Leave blank to auto-generate"
-              />
-              <p className="muted">
-                This secret is required to manage the vote (admin panel).
-                A separate voting secret will be auto-generated for ballot submission.
-              </p>
-            </div>
+            {advancedTab === 'vote' && (
+              <div role="tabpanel" aria-label="Vote settings">
+                <div className="form-group">
+                  <label htmlFor="customId">Custom Vote ID (optional)</label>
+                  <input
+                    type="text"
+                    id="customId"
+                    value={customId}
+                    onChange={(e) => setCustomId(e.target.value)}
+                    placeholder="e.g., team-lunch"
+                  />
+                  <p className="muted">Lowercase letters, numbers, and dashes. Leave blank to auto-generate.</p>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="customSecret">Custom Admin Secret (optional)</label>
+                  <input
+                    type="text"
+                    id="customSecret"
+                    value={customSecret}
+                    onChange={(e) => setCustomSecret(e.target.value)}
+                    placeholder="Leave blank to auto-generate"
+                  />
+                  <p className="muted">
+                    This secret is required to manage the vote (admin panel).
+                    A separate voting secret will be auto-generated for ballot submission.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {advancedTab === 'schedule' && (
+              <div role="tabpanel" aria-label="Schedule settings">
+                <h3 style={{ marginTop: '0.5rem' }}>Recurring Schedule (optional)</h3>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={recurrenceEnabled}
+                      onChange={(e) => setRecurrenceEnabled(e.target.checked)}
+                    />
+                    <span>Enable recurring votes</span>
+                  </label>
+                  <p className="muted">
+                    Recurring votes automatically create a new vote after the previous one closes.
+                    Requires a start time below.
+                  </p>
+                </div>
+
+                {recurrenceEnabled && (
+                  <>
+                    <div className="form-group">
+                      <label htmlFor="recurrenceStartAt">Start date &amp; time</label>
+                      <input
+                        type="datetime-local"
+                        id="recurrenceStartAt"
+                        className="input-large"
+                        value={recurrenceStartAt}
+                        onChange={(e) => setRecurrenceStartAt(e.target.value)}
+                      />
+                      <p className="muted">
+                        The vote opens at this time and closes after the duration below.
+                      </p>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="periodDays">Repeat every (days)</label>
+                      <input
+                        type="number"
+                        id="periodDays"
+                        min={7}
+                        step={1}
+                        className="input-large"
+                        value={periodDays}
+                        onChange={(e) => setPeriodDays(e.target.value)}
+                      />
+                      <p className="muted">Minimum 7 days.</p>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="voteDurationHours">Vote duration (hours)</label>
+                      <input
+                        type="number"
+                        id="voteDurationHours"
+                        min={1}
+                        step={1}
+                        className="input-large"
+                        value={voteDurationHours}
+                        onChange={(e) => setVoteDurationHours(e.target.value)}
+                      />
+                      <p className="muted">How long each recurring vote stays open.</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {advancedTab === 'notifications' && (
+              <div role="tabpanel" aria-label="Notification settings">
+                <h3 style={{ marginTop: '0.5rem' }}>Discord Notifications (optional)</h3>
+                <p className="muted" style={{ marginBottom: '0.75rem' }}>
+                  Attach a Discord integration to post messages when the vote is created and when it closes.
+                  Manage integrations on the System Admin page.
+                </p>
+                <p className="muted" style={{ marginBottom: '0.75rem' }}>
+                  <Link href="/system">Go to System Admin</Link>
+                </p>
+
+                <div className="form-group">
+                  <label htmlFor="integrationId">Discord Integration ID</label>
+                  <input
+                    type="number"
+                    id="integrationId"
+                    min={1}
+                    step={1}
+                    className="input-large"
+                    value={integrationId}
+                    onChange={(e) => setIntegrationId(e.target.value)}
+                    placeholder="e.g., 1"
+                  />
+                  <p className="muted">
+                    Use the integration ID from System Admin. Leave blank to skip notifications.
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="integrationAdminSecret">Admin API secret</label>
+                  <input
+                    type="password"
+                    id="integrationAdminSecret"
+                    value={integrationAdminSecret}
+                    onChange={(e) => setIntegrationAdminSecret(e.target.value)}
+                    placeholder="Enter ADMIN_SECRET to attach integration"
+                    className="input-large"
+                  />
+                  <p className="muted">
+                    Required when attaching an integration. This is the system ADMIN_SECRET, not the vote admin secret.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIntegrationId('')}
+                    disabled={!integrationId}
+                  >
+                    Clear integration
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
-
         {error && <p className="error" style={{ marginBottom: '1rem' }}>{error}</p>}
 
         <button type="submit" disabled={loading}>

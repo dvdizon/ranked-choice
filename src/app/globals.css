@@ -127,6 +127,8 @@ label {
 input[type="text"],
 input[type="password"],
 input[type="datetime-local"],
+input[type="number"],
+select,
 textarea {
   width: 100%;
   padding: 0.5rem;
@@ -136,6 +138,12 @@ textarea {
   background: var(--bg-secondary);
   color: var(--fg);
   transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.input-large {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  min-height: 44px;
 }
 
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
@@ -216,6 +224,51 @@ button:disabled {
   margin-bottom: 1rem;
   box-shadow: var(--card-shadow);
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tab-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.tab-button:hover {
+  background: var(--bg);
+}
+
+.tab-button.tab-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.discord-heading {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.discord-heading h3 {
+  margin-bottom: 0.1rem;
+}
+
+.discord-logo {
+  width: 32px;
+  height: 32px;
+  color: #5865f2;
+  flex-shrink: 0;
 }
 
 a {

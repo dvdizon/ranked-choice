@@ -59,6 +59,16 @@ export async function POST(
       )
     }
 
+    if (vote.recurrence_start_at) {
+      const startAt = new Date(vote.recurrence_start_at)
+      if (!isNaN(startAt.getTime()) && new Date() < startAt) {
+        return NextResponse.json(
+          { error: `Voting has not started yet. Starts at ${startAt.toISOString()}` },
+          { status: 403 }
+        )
+      }
+    }
+
     // Add custom options to the vote if provided
     if (customOptions && Array.isArray(customOptions) && customOptions.length > 0) {
       // Validate custom options
