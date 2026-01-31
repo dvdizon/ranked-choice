@@ -10,6 +10,14 @@ This document tracks work history, including what was implemented by AI agents a
 
 ### Added
 - **MIT License** - Added LICENSE file with MIT license for open source distribution
+- **Nginx Rate Limiting** - Updated nginx config with protection against disk space exhaustion attacks
+  - Rate limiting zones: 1 vote creation/min, 10 API requests/sec per IP
+  - Connection limits per IP to prevent resource exhaustion
+  - Request body size limit (16KB) to prevent large payload attacks
+  - HTTPS with HTTP→HTTPS redirect
+  - HSTS header for security
+  - Health check endpoint restricted to localhost
+  - Updated paths to use `/rcv` basePath prefix
 - **Skip CI Support** - CI workflow can be skipped by including `[skip ci]` or `[ci skip]` in commit message
   - Useful for documentation-only or trivial changes
   - Saves GitHub Actions minutes and avoids unnecessary builds
