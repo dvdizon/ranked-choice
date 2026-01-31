@@ -75,9 +75,14 @@ async function sendVoteCreatedNotificationForVote(vote: Vote): Promise<void> {
 
   try {
     const baseUrl = getBaseUrl()
+    const votePath = `${baseUrl}${withBasePath(`/v/${vote.id}`)}`
+    const voteUrl = vote.voting_secret_plaintext
+      ? `${votePath}?secret=${encodeURIComponent(vote.voting_secret_plaintext)}`
+      : votePath
+
     await notifyVoteCreated(vote.integration_id, {
       title: vote.title,
-      voteUrl: `${baseUrl}${withBasePath(`/v/${vote.id}`)}`,
+      voteUrl,
       resultsUrl: `${baseUrl}${withBasePath(`/v/${vote.id}/results`)}`,
       autoCloseAt: vote.auto_close_at,
     })

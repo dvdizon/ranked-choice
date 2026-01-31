@@ -8,6 +8,19 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+### Changed
+- **Discord Notification Messages** - Discord notifications now include the voting secret in the voting link for easier access
+  - Voting link includes `?secret=...` parameter so users can vote directly from Discord
+  - Results link does not include the secret (public access)
+  - Added `voting_secret_plaintext` column to votes table for recurring votes with integrations
+  - Backward compatible: existing recurring votes continue working without secrets in links
+- **Create Vote UI** - Improved discoverability of advanced options
+  - Advanced options now always visible with clear visual separation
+  - Removed toggle button - advanced section now has dedicated heading and border
+  - Moved auto-close option from main form into Schedule tab
+  - Auto-close and recurring schedule are mutually exclusive in Schedule tab
+
+### Fixed
 - **System Admin UI** - Moved system-level integration management to a dedicated `/system` page and linked to it from vote creation
 - **Create Vote UI** - Moved Discord notification inputs into the advanced options tab (integration ID + admin API secret)
 - **Decision Records** - Moved decision records out of `PLAN.md` into `docs/decisions/`

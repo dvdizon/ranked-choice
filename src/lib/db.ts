@@ -125,6 +125,12 @@ try {
   // Column already exists, ignore error
 }
 
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN voting_secret_plaintext TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
 // Create integrations table
 db.exec(`
   CREATE TABLE IF NOT EXISTS integrations (
@@ -144,6 +150,7 @@ export interface Vote {
   options: string[]
   write_secret_hash: string
   voting_secret_hash: string | null
+  voting_secret_plaintext: string | null
   created_at: string
   closed_at: string | null
   auto_close_at: string | null
@@ -211,6 +218,7 @@ export function createVote(
     recurrenceGroupId?: string | null
     integrationId?: number | null
     recurrenceActive?: boolean
+    votingSecretPlaintext?: string | null
   }
 ): Vote {
   const periodDays = recurrence?.periodDays ?? null
@@ -219,14 +227,15 @@ export function createVote(
   const recurrenceGroupId = recurrence?.recurrenceGroupId ?? null
   const integrationId = recurrence?.integrationId ?? null
   const recurrenceActive = recurrence?.recurrenceActive ? 1 : 0
+  const votingSecretPlaintext = recurrence?.votingSecretPlaintext ?? null
 
   const stmt = db.prepare(`
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
-      auto_close_at, voting_secret_hash, period_days, vote_duration_hours,
+      auto_close_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
       recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     id,
@@ -236,6 +245,7 @@ export function createVote(
     voterNamesRequired ? 1 : 0,
     autoCloseAt,
     votingSecretHash,
+    votingSecretPlaintext,
     periodDays,
     voteDurationHours,
     recurrenceStartAt,
@@ -521,10 +531,10 @@ export function createNextRecurringVote(
   const stmt = db.prepare(`
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
-      auto_close_at, voting_secret_hash, period_days, vote_duration_hours,
+      auto_close_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
       recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     newId,
@@ -534,6 +544,7 @@ export function createNextRecurringVote(
     baseVote.voter_names_required ? 1 : 0,
     autoCloseAt,
     baseVote.voting_secret_hash,
+    baseVote.voting_secret_plaintext,
     baseVote.period_days,
     baseVote.vote_duration_hours,
     recurrenceStartAt,
