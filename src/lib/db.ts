@@ -186,6 +186,21 @@ export interface Integration {
   created_at: string
 }
 
+export interface LiveVoteSummary {
+  id: string
+  title: string
+  options: string[]
+  created_at: string
+  auto_close_at: string | null
+  voter_names_required: boolean
+  period_days: number | null
+  vote_duration_hours: number | null
+  recurrence_start_at: string | null
+  recurrence_group_id: string | null
+  integration_id: number | null
+  recurrence_active: boolean
+}
+
 export interface Ballot {
   id: number
   vote_id: string
@@ -284,6 +299,54 @@ export function getVote(id: string): Vote | null {
 export function voteExists(id: string): boolean {
   const stmt = db.prepare('SELECT 1 FROM votes WHERE id = ?')
   return stmt.get(id) !== undefined
+}
+
+export function closeExpiredVotes(): number {
+  const stmt = db.prepare(
+    "UPDATE votes SET closed_at = datetime('now') WHERE closed_at IS NULL AND auto_close_at IS NOT NULL AND auto_close_at <= datetime('now')"
+  )
+  return stmt.run().changes
+}
+
+export function getLiveVotesPaginated(limit: number, offset: number): { votes: LiveVoteSummary[]; total: number } {
+  const countStmt = db.prepare(`
+    SELECT COUNT(*) as count
+    FROM votes
+    WHERE closed_at IS NULL
+      AND (auto_close_at IS NULL OR auto_close_at > datetime('now'))
+  `)
+  const total = (countStmt.get() as { count: number }).count
+
+  const stmt = db.prepare(`
+    SELECT
+      id,
+      title,
+      options,
+      created_at,
+      auto_close_at,
+      voter_names_required,
+      period_days,
+      vote_duration_hours,
+      recurrence_start_at,
+      recurrence_group_id,
+      integration_id,
+      recurrence_active
+    FROM votes
+    WHERE closed_at IS NULL
+      AND (auto_close_at IS NULL OR auto_close_at > datetime('now'))
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?
+  `)
+  const rows = stmt.all(limit, offset) as any[]
+
+  const votes = rows.map((row) => ({
+    ...row,
+    options: JSON.parse(row.options),
+    voter_names_required: Boolean(row.voter_names_required),
+    recurrence_active: Boolean(row.recurrence_active),
+  }))
+
+  return { votes, total }
 }
 
 // Ballot operations

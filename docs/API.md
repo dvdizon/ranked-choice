@@ -465,6 +465,105 @@ Authorization: Bearer <ADMIN_SECRET>
 
 ---
 
+### List Live Votes
+
+**GET** `/api/admin/votes`
+
+List active (open) votes, paginated.
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Query Parameters:**
+
+- `page` (number, default: 1)
+- `pageSize` (number, default: 10, max: 50)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "pageSize": 10,
+  "total": 2,
+  "totalPages": 1,
+  "votes": [
+    {
+      "id": "team-lunch-2026",
+      "title": "Friday Lunch",
+      "options": ["Pizza", "Sushi", "Tacos"],
+      "created_at": "2026-02-01T12:00:00Z",
+      "auto_close_at": "2026-02-02T12:00:00Z",
+      "voter_names_required": true,
+      "period_days": null,
+      "vote_duration_hours": null,
+      "recurrence_start_at": null,
+      "recurrence_group_id": null,
+      "integration_id": 1,
+      "recurrence_active": false
+    }
+  ]
+}
+```
+
+---
+
+### Close Live Vote
+
+**PATCH** `/api/admin/votes/:voteId`
+
+Close a live vote (admin secret required).
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Request Body:**
+
+```json
+{
+  "action": "close"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### Delete Live Vote
+
+**DELETE** `/api/admin/votes/:voteId`
+
+Delete a vote and all ballots (admin secret required).
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
 ## Integrations Endpoints
 
 These endpoints require the `ADMIN_SECRET` environment variable to be set and provided in the Authorization header.

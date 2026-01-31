@@ -39,7 +39,8 @@ npm run test:watch   # Tests in watch mode
 ```
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── page.tsx           # Home / Create vote
+│   ├── page.tsx           # Home / Create vote (server wrapper)
+│   ├── create-vote-client.tsx  # Home / Create vote client UI
 │   ├── system/            # System admin (integrations)
 │   ├── v/[voteId]/        # Vote and results pages
 │   │   ├── page.tsx       # Voting page (opt-out UX, custom options)
@@ -268,6 +269,9 @@ location /health {
   - Close/reopen voting (prevents new submissions when closed)
   - Set or change auto-close date/time
   - Edit vote options (removes deleted options from existing ballots)
+- **System Admin** (`/system`): ADMIN_SECRET protected management
+  - Monitor live votes, close/delete them, and re-create votes with prefilled fields
+  - Manage integrations (Discord, Slack, webhook)
 - **API Key Management** (`/api/admin/api-keys`): Admin-secret protected endpoints
   - Create API keys for programmatic access
   - List all API keys with usage timestamps
@@ -302,5 +306,3 @@ From PLAN.md - do not modify without recording a Decision Record in `docs/decisi
 - Check `PLAN.md` for requirements clarity
 - Check `docs/refactor-opportunities.md` for intentionally deferred features
 - Check `docs/CHANGELOG.md` for context on past decisions
-
-

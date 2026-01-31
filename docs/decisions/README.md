@@ -18,6 +18,7 @@ Each record captures a product or architecture decision that affects behavior, U
 - **DR-2026-01-31-02** — Discord Integration (Messaging Platform Notifications) (`DR-2026-01-31-02.md`)
 - **DR-2026-01-31-03** — System Admin Page for Integrations (`DR-2026-01-31-03.md`)
 - **DR-2026-01-31-04** — Notifications Tab in Create Vote Advanced Options (`DR-2026-01-31-04.md`)
+- **DR-2026-02-01-01** — System Admin Live Vote Management (`DR-2026-02-01-01.md`)
 
 ## Decision Record Template
 

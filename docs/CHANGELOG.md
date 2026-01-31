@@ -8,6 +8,11 @@ This document tracks work history, including what was implemented by AI agents a
 
 ## [Unreleased]
 
+### Added
+- **System Admin Live Votes** - Added a paginated list of live votes to `/system` with close, delete, and re-create actions
+  - New admin endpoints for listing live votes and closing/deleting by ADMIN_SECRET
+  - Re-create action pre-fills the create vote form with the original settings
+
 ### Changed
 - **Discord Notification Messages** - Discord notifications now include the voting secret in the voting link for easier access
   - Voting link includes `?secret=...` parameter so users can vote directly from Discord
@@ -339,7 +344,6 @@ This project uses semantic versioning:
 - **Human**: David (project owner, planning, decisions)
 - **AI Agent**: Initial MVP implementation (Phases 1-3)
 - **AI Agent**: Repository cleanup and CI/CD setup (current)
-
 
 
 
