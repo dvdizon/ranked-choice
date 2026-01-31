@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createVote, voteExists } from '@/lib/db'
+import { createVote, getIntegrationById, voteExists } from '@/lib/db'
 import {
   generateVoteId,
   generateWriteSecret,
@@ -11,7 +11,17 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, options, voteId: requestedId, writeSecret: requestedSecret, votingSecret: requestedVotingSecret, voterNamesRequired, autoCloseAt } = body
+    const {
+      title,
+      options,
+      voteId: requestedId,
+      writeSecret: requestedSecret,
+      votingSecret: requestedVotingSecret,
+      voterNamesRequired,
+      autoCloseAt,
+      integrationId,
+      integrationAdminSecret,
+    } = body
 
     // Validate title
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -102,6 +112,48 @@ export async function POST(request: NextRequest) {
       validAutoCloseAt = autoCloseDate.toISOString()
     }
 
+    let validIntegrationId: number | null = null
+    if (integrationId !== undefined && integrationId !== null && String(integrationId).trim().length > 0) {
+      const systemAdminSecret = process.env.ADMIN_SECRET
+      if (!systemAdminSecret) {
+        return NextResponse.json(
+          { error: 'Admin secret is not configured for integrations' },
+          { status: 400 }
+        )
+      }
+
+      if (!integrationAdminSecret || typeof integrationAdminSecret !== 'string' || integrationAdminSecret.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Admin secret is required to attach integrations' },
+          { status: 401 }
+        )
+      }
+
+      if (integrationAdminSecret.trim() !== systemAdminSecret) {
+        return NextResponse.json(
+          { error: 'Invalid admin secret for integrations' },
+          { status: 403 }
+        )
+      }
+
+      const parsedIntegrationId = Number.parseInt(String(integrationId), 10)
+      if (!Number.isInteger(parsedIntegrationId) || parsedIntegrationId <= 0) {
+        return NextResponse.json(
+          { error: 'Integration ID must be a positive integer' },
+          { status: 400 }
+        )
+      }
+
+      const integration = getIntegrationById(parsedIntegrationId)
+      if (!integration) {
+        return NextResponse.json(
+          { error: 'Integration not found' },
+          { status: 400 }
+        )
+      }
+      validIntegrationId = parsedIntegrationId
+    }
+
     // Hash the secrets for storage
     const adminSecretHash = await hashSecret(adminSecret)
     const votingSecretHash = await hashSecret(votingSecret)
@@ -114,7 +166,8 @@ export async function POST(request: NextRequest) {
       adminSecretHash,
       voterNamesRequired !== false, // Default to true if not specified
       validAutoCloseAt,
-      votingSecretHash
+      votingSecretHash,
+      validIntegrationId
     )
 
     return NextResponse.json({

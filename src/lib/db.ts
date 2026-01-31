@@ -76,6 +76,24 @@ try {
   // Column already exists, ignore error
 }
 
+// Migration: Add integration_id column if it doesn't exist
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN integration_id INTEGER`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+// Create integrations table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS integrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    config TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`)
+
 export default db
 
 export interface Vote {
@@ -88,6 +106,30 @@ export interface Vote {
   closed_at: string | null
   auto_close_at: string | null
   voter_names_required: boolean
+  integration_id: number | null
+}
+
+export interface DiscordIntegrationConfig {
+  webhook_url: string
+}
+
+export interface SlackIntegrationConfig {
+  webhook_url: string
+}
+
+export interface WebhookIntegrationConfig {
+  url: string
+  headers?: Record<string, string>
+}
+
+export type IntegrationConfig = DiscordIntegrationConfig | SlackIntegrationConfig | WebhookIntegrationConfig
+
+export interface Integration {
+  id: number
+  name: string
+  type: 'discord' | 'slack' | 'webhook'
+  config: IntegrationConfig
+  created_at: string
 }
 
 export interface Ballot {
@@ -114,13 +156,26 @@ export function createVote(
   writeSecretHash: string,
   voterNamesRequired: boolean = true,
   autoCloseAt: string | null = null,
-  votingSecretHash: string | null = null
+  votingSecretHash: string | null = null,
+  integrationId: number | null = null
 ): Vote {
   const stmt = db.prepare(`
-    INSERT INTO votes (id, title, options, write_secret_hash, voter_names_required, auto_close_at, voting_secret_hash)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO votes (
+      id, title, options, write_secret_hash, voter_names_required,
+      auto_close_at, voting_secret_hash, integration_id
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `)
-  stmt.run(id, title, JSON.stringify(options), writeSecretHash, voterNamesRequired ? 1 : 0, autoCloseAt, votingSecretHash)
+  stmt.run(
+    id,
+    title,
+    JSON.stringify(options),
+    writeSecretHash,
+    voterNamesRequired ? 1 : 0,
+    autoCloseAt,
+    votingSecretHash,
+    integrationId
+  )
   return getVote(id)!
 }
 
@@ -287,5 +342,56 @@ export function updateApiKeyLastUsed(id: number): void {
 
 export function deleteApiKey(id: number): void {
   const stmt = db.prepare('DELETE FROM api_keys WHERE id = ?')
+  stmt.run(id)
+}
+
+// Integration operations
+export function createIntegration(
+  type: 'discord' | 'slack' | 'webhook',
+  name: string,
+  config: IntegrationConfig
+): Integration {
+  const stmt = db.prepare(`
+    INSERT INTO integrations (name, type, config)
+    VALUES (?, ?, ?)
+  `)
+  const result = stmt.run(name, type, JSON.stringify(config))
+  return getIntegrationById(result.lastInsertRowid as number)!
+}
+
+export function getIntegrationById(id: number): Integration | null {
+  const stmt = db.prepare('SELECT * FROM integrations WHERE id = ?')
+  const row = stmt.get(id) as any
+  if (!row) return null
+  return {
+    ...row,
+    config: JSON.parse(row.config),
+  }
+}
+
+export function getAllIntegrations(): Integration[] {
+  const stmt = db.prepare('SELECT * FROM integrations ORDER BY created_at DESC')
+  const rows = stmt.all() as any[]
+  return rows.map((row) => ({
+    ...row,
+    config: JSON.parse(row.config),
+  }))
+}
+
+export function updateIntegration(
+  id: number,
+  name: string,
+  config: IntegrationConfig
+): Integration | null {
+  const integration = getIntegrationById(id)
+  if (!integration) return null
+
+  const stmt = db.prepare('UPDATE integrations SET name = ?, config = ? WHERE id = ?')
+  stmt.run(name, JSON.stringify(config), id)
+  return getIntegrationById(id)
+}
+
+export function deleteIntegration(id: number): void {
+  const stmt = db.prepare('DELETE FROM integrations WHERE id = ?')
   stmt.run(id)
 }

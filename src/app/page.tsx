@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import CopyButton from './components/CopyButton'
 import { withBasePath } from '@/lib/paths'
 
@@ -30,7 +31,10 @@ export default function CreateVotePage() {
   const [customSecret, setCustomSecret] = useState('')
   const [voterNamesRequired, setVoterNamesRequired] = useState(true)
   const [autoCloseAt, setAutoCloseAt] = useState('')
+  const [integrationId, setIntegrationId] = useState('')
+  const [integrationAdminSecret, setIntegrationAdminSecret] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [advancedTab, setAdvancedTab] = useState<'vote' | 'notifications'>('vote')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [createdVote, setCreatedVote] = useState<CreateVoteResponse | null>(null)
@@ -42,6 +46,7 @@ export default function CreateVotePage() {
       if (savedOptions) {
         setOptionsText(savedOptions)
       }
+
     } catch (err) {
       // Ignore localStorage errors (e.g., disabled cookies)
     }
@@ -63,6 +68,22 @@ export default function CreateVotePage() {
       return
     }
 
+    let parsedIntegrationId: number | undefined
+    if (integrationId.trim()) {
+      if (!integrationAdminSecret.trim()) {
+        setError('Admin API secret is required to attach a Discord integration.')
+        setLoading(false)
+        return
+      }
+
+      parsedIntegrationId = Number.parseInt(integrationId, 10)
+      if (!Number.isInteger(parsedIntegrationId) || parsedIntegrationId <= 0) {
+        setError('Integration ID must be a positive integer.')
+        setLoading(false)
+        return
+      }
+    }
+
     try {
       const res = await fetch(withBasePath('/api/votes'), {
         method: 'POST',
@@ -74,6 +95,8 @@ export default function CreateVotePage() {
           writeSecret: customSecret || undefined,
           voterNamesRequired,
           autoCloseAt: autoCloseAt ? new Date(autoCloseAt).toISOString() : undefined,
+          integrationId: parsedIntegrationId,
+          integrationAdminSecret: parsedIntegrationId ? integrationAdminSecret.trim() : undefined,
         }),
       })
 
@@ -213,6 +236,8 @@ View results: ${resultsFullUrl}`
               setCustomSecret('')
               setVoterNamesRequired(true)
               setAutoCloseAt('')
+              setIntegrationId('')
+              setIntegrationAdminSecret('')
             }}
           >
             Create Another
@@ -295,35 +320,116 @@ View results: ${resultsFullUrl}`
 
         {showAdvanced && (
           <div className="card">
-            <div className="form-group">
-              <label htmlFor="customId">Custom Vote ID (optional)</label>
-              <input
-                type="text"
-                id="customId"
-                value={customId}
-                onChange={(e) => setCustomId(e.target.value)}
-                placeholder="e.g., team-lunch"
-              />
-              <p className="muted">Lowercase letters, numbers, and dashes. Leave blank to auto-generate.</p>
+            <div className="tab-bar" role="tablist" aria-label="Advanced options">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={advancedTab === 'vote'}
+                className={`tab-button ${advancedTab === 'vote' ? 'tab-active' : ''}`}
+                onClick={() => setAdvancedTab('vote')}
+              >
+                Vote
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={advancedTab === 'notifications'}
+                className={`tab-button ${advancedTab === 'notifications' ? 'tab-active' : ''}`}
+                onClick={() => setAdvancedTab('notifications')}
+              >
+                Notifications
+              </button>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="customSecret">Custom Admin Secret (optional)</label>
-              <input
-                type="text"
-                id="customSecret"
-                value={customSecret}
-                onChange={(e) => setCustomSecret(e.target.value)}
-                placeholder="Leave blank to auto-generate"
-              />
-              <p className="muted">
-                This secret is required to manage the vote (admin panel).
-                A separate voting secret will be auto-generated for ballot submission.
-              </p>
-            </div>
+            {advancedTab === 'vote' && (
+              <div role="tabpanel" aria-label="Vote settings">
+                <div className="form-group">
+                  <label htmlFor="customId">Custom Vote ID (optional)</label>
+                  <input
+                    type="text"
+                    id="customId"
+                    value={customId}
+                    onChange={(e) => setCustomId(e.target.value)}
+                    placeholder="e.g., team-lunch"
+                  />
+                  <p className="muted">Lowercase letters, numbers, and dashes. Leave blank to auto-generate.</p>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="customSecret">Custom Admin Secret (optional)</label>
+                  <input
+                    type="text"
+                    id="customSecret"
+                    value={customSecret}
+                    onChange={(e) => setCustomSecret(e.target.value)}
+                    placeholder="Leave blank to auto-generate"
+                  />
+                  <p className="muted">
+                    This secret is required to manage the vote (admin panel).
+                    A separate voting secret will be auto-generated for ballot submission.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {advancedTab === 'notifications' && (
+              <div role="tabpanel" aria-label="Notification settings">
+                <h3 style={{ marginTop: '0.5rem' }}>Discord Notifications (optional)</h3>
+                <p className="muted" style={{ marginBottom: '0.75rem' }}>
+                  Attach a Discord integration to post messages when the vote is created and when it closes.
+                  Manage integrations on the System Admin page.
+                </p>
+                <p className="muted" style={{ marginBottom: '0.75rem' }}>
+                  <Link href="/system">Go to System Admin</Link>
+                </p>
+
+                <div className="form-group">
+                  <label htmlFor="integrationId">Discord Integration ID</label>
+                  <input
+                    type="number"
+                    id="integrationId"
+                    min={1}
+                    step={1}
+                    className="input-large"
+                    value={integrationId}
+                    onChange={(e) => setIntegrationId(e.target.value)}
+                    placeholder="e.g., 1"
+                  />
+                  <p className="muted">
+                    Use the integration ID from System Admin. Leave blank to skip notifications.
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="integrationAdminSecret">Admin API secret</label>
+                  <input
+                    type="password"
+                    id="integrationAdminSecret"
+                    value={integrationAdminSecret}
+                    onChange={(e) => setIntegrationAdminSecret(e.target.value)}
+                    placeholder="Enter ADMIN_SECRET to attach integration"
+                    className="input-large"
+                  />
+                  <p className="muted">
+                    Required when attaching an integration. This is the system ADMIN_SECRET, not the vote admin secret.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIntegrationId('')}
+                    disabled={!integrationId}
+                  >
+                    Clear integration
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
-
         {error && <p className="error" style={{ marginBottom: '1rem' }}>{error}</p>}
 
         <button type="submit" disabled={loading}>
