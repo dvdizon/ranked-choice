@@ -19,7 +19,11 @@ export async function POST(request: NextRequest) {
       votingSecret: requestedVotingSecret,
       voterNamesRequired,
       autoCloseAt,
+      recurrenceEnabled,
+      periodDays,
+      voteDurationHours,
       integrationId,
+      recurrenceStartAt,
       integrationAdminSecret,
     } = body
 
@@ -93,9 +97,69 @@ export async function POST(request: NextRequest) {
       ? requestedVotingSecret.trim()
       : generateWriteSecret()
 
-    // Validate autoCloseAt if provided
     let validAutoCloseAt: string | null = null
-    if (autoCloseAt && typeof autoCloseAt === 'string' && autoCloseAt.trim().length > 0) {
+    const recurringRequested = recurrenceEnabled === true
+    let validPeriodDays: number | null = null
+    let validVoteDurationHours: number | null = null
+    let recurrenceGroupId: string | null = null
+    let recurrenceActive = false
+    let validRecurrenceStartAt: string | null = null
+
+    if (recurringRequested) {
+      if (!recurrenceStartAt || typeof recurrenceStartAt !== 'string' || recurrenceStartAt.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Start date/time is required for recurring votes' },
+          { status: 400 }
+        )
+      }
+
+      const startDate = new Date(recurrenceStartAt)
+      if (isNaN(startDate.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid start date/time format' },
+          { status: 400 }
+        )
+      }
+
+      const periodValue = Number(periodDays)
+      if (!Number.isInteger(periodValue) || periodValue < 7) {
+        return NextResponse.json(
+          { error: 'Period must be an integer number of days (minimum 7)' },
+          { status: 400 }
+        )
+      }
+
+      const durationValue = Number(voteDurationHours)
+      if (!Number.isInteger(durationValue) || durationValue < 1) {
+        return NextResponse.json(
+          { error: 'Vote duration must be an integer number of hours (minimum 1)' },
+          { status: 400 }
+        )
+      }
+
+      validPeriodDays = periodValue
+      validVoteDurationHours = durationValue
+      validRecurrenceStartAt = startDate.toISOString()
+      recurrenceGroupId = voteId
+      recurrenceActive = true
+
+      const autoCloseDate = new Date(startDate.getTime() + durationValue * 60 * 60 * 1000)
+      if (autoCloseDate <= new Date()) {
+        return NextResponse.json(
+          { error: 'Recurring vote must close in the future' },
+          { status: 400 }
+        )
+      }
+      validAutoCloseAt = autoCloseDate.toISOString()
+    } else if (periodDays !== undefined || voteDurationHours !== undefined) {
+      return NextResponse.json(
+        { error: 'Recurring settings require recurrenceEnabled=true' },
+        { status: 400 }
+      )
+    }
+
+    // Validate autoCloseAt if provided (non-recurring)
+    if (!recurringRequested && autoCloseAt && typeof autoCloseAt === 'string' && autoCloseAt.trim().length > 0) {
       const autoCloseDate = new Date(autoCloseAt)
       if (isNaN(autoCloseDate.getTime())) {
         return NextResponse.json(
@@ -167,7 +231,14 @@ export async function POST(request: NextRequest) {
       voterNamesRequired !== false, // Default to true if not specified
       validAutoCloseAt,
       votingSecretHash,
-      validIntegrationId
+      {
+        periodDays: validPeriodDays,
+        voteDurationHours: validVoteDurationHours,
+        recurrenceStartAt: validRecurrenceStartAt,
+        recurrenceGroupId,
+        integrationId: validIntegrationId,
+        recurrenceActive,
+      }
     )
 
     return NextResponse.json({

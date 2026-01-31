@@ -2,18 +2,30 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 
-const DATABASE_PATH = process.env.DATABASE_PATH || './data/rcv.sqlite'
+let isBuildPhase = false
+try {
+  // Avoid opening the real DB during Next.js build data collection.
+  const { PHASE_PRODUCTION_BUILD } = require('next/constants') as { PHASE_PRODUCTION_BUILD: string }
+  isBuildPhase = process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD
+} catch {
+  // Ignore if next/constants is unavailable.
+}
+
+const DATABASE_PATH = isBuildPhase ? ':memory:' : (process.env.DATABASE_PATH || './data/rcv.sqlite')
 
 // Ensure the directory exists
-const dbDir = path.dirname(DATABASE_PATH)
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true })
+if (DATABASE_PATH !== ':memory:') {
+  const dbDir = path.dirname(DATABASE_PATH)
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true })
+  }
 }
 
 const db = new Database(DATABASE_PATH)
 
 // Enable WAL mode for better concurrent access
 db.pragma('journal_mode = WAL')
+db.pragma('busy_timeout = 3000')
 
 // Initialize schema
 db.exec(`
@@ -76,9 +88,39 @@ try {
   // Column already exists, ignore error
 }
 
-// Migration: Add integration_id column if it doesn't exist
+// Migration: Add recurring vote fields
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN period_days INTEGER`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN vote_duration_hours INTEGER`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN recurrence_start_at TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN recurrence_group_id TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
 try {
   db.exec(`ALTER TABLE votes ADD COLUMN integration_id INTEGER`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN recurrence_active INTEGER DEFAULT 0`)
 } catch (e) {
   // Column already exists, ignore error
 }
@@ -106,7 +148,12 @@ export interface Vote {
   closed_at: string | null
   auto_close_at: string | null
   voter_names_required: boolean
+  period_days: number | null
+  vote_duration_hours: number | null
+  recurrence_start_at: string | null
+  recurrence_group_id: string | null
   integration_id: number | null
+  recurrence_active: boolean
 }
 
 export interface DiscordIntegrationConfig {
@@ -157,14 +204,29 @@ export function createVote(
   voterNamesRequired: boolean = true,
   autoCloseAt: string | null = null,
   votingSecretHash: string | null = null,
-  integrationId: number | null = null
+  recurrence?: {
+    periodDays?: number | null
+    voteDurationHours?: number | null
+    recurrenceStartAt?: string | null
+    recurrenceGroupId?: string | null
+    integrationId?: number | null
+    recurrenceActive?: boolean
+  }
 ): Vote {
+  const periodDays = recurrence?.periodDays ?? null
+  const voteDurationHours = recurrence?.voteDurationHours ?? null
+  const recurrenceStartAt = recurrence?.recurrenceStartAt ?? null
+  const recurrenceGroupId = recurrence?.recurrenceGroupId ?? null
+  const integrationId = recurrence?.integrationId ?? null
+  const recurrenceActive = recurrence?.recurrenceActive ? 1 : 0
+
   const stmt = db.prepare(`
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
-      auto_close_at, voting_secret_hash, integration_id
+      auto_close_at, voting_secret_hash, period_days, vote_duration_hours,
+      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     id,
@@ -174,7 +236,12 @@ export function createVote(
     voterNamesRequired ? 1 : 0,
     autoCloseAt,
     votingSecretHash,
-    integrationId
+    periodDays,
+    voteDurationHours,
+    recurrenceStartAt,
+    recurrenceGroupId,
+    integrationId,
+    recurrenceActive
   )
   return getVote(id)!
 }
@@ -188,6 +255,7 @@ export function getVote(id: string): Vote | null {
     ...row,
     options: JSON.parse(row.options),
     voter_names_required: Boolean(row.voter_names_required),
+    recurrence_active: Boolean(row.recurrence_active),
   }
 
   // Auto-close vote if auto_close_at has passed and vote is not already closed
@@ -394,4 +462,206 @@ export function updateIntegration(
 export function deleteIntegration(id: number): void {
   const stmt = db.prepare('DELETE FROM integrations WHERE id = ?')
   stmt.run(id)
+}
+
+// Recurring vote operations
+export function getRecurringVotesNeedingNewInstance(): Vote[] {
+  // Find recurring votes where:
+  // 1. recurrence_active is true
+  // 2. The latest vote in the group is closed
+  // 3. Enough time has passed since the last vote started (period_days)
+  const stmt = db.prepare(`
+    SELECT v.* FROM votes v
+    WHERE v.recurrence_active = 1
+    AND v.closed_at IS NOT NULL
+    AND v.recurrence_group_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM votes v2
+      WHERE v2.recurrence_group_id = v.recurrence_group_id
+      AND v2.closed_at IS NULL
+    )
+    AND v.created_at = (
+      SELECT MAX(v3.created_at) FROM votes v3
+      WHERE v3.recurrence_group_id = v.recurrence_group_id
+    )
+    AND datetime(COALESCE(v.recurrence_start_at, v.created_at), '+' || v.period_days || ' days') <= datetime('now')
+  `)
+  const rows = stmt.all() as any[]
+  return rows.map((row) => ({
+    ...row,
+    options: JSON.parse(row.options),
+    voter_names_required: Boolean(row.voter_names_required),
+    recurrence_active: Boolean(row.recurrence_active),
+  }))
+}
+
+export function getLatestVoteInRecurrenceGroup(recurrenceGroupId: string): Vote | null {
+  const stmt = db.prepare(`
+    SELECT * FROM votes
+    WHERE recurrence_group_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `)
+  const row = stmt.get(recurrenceGroupId) as any
+  if (!row) return null
+  return {
+    ...row,
+    options: JSON.parse(row.options),
+    voter_names_required: Boolean(row.voter_names_required),
+    recurrence_active: Boolean(row.recurrence_active),
+  }
+}
+
+export function createNextRecurringVote(
+  baseVote: Vote,
+  newId: string,
+  autoCloseAt: string,
+  recurrenceStartAt: string
+): Vote {
+  const stmt = db.prepare(`
+    INSERT INTO votes (
+      id, title, options, write_secret_hash, voter_names_required,
+      auto_close_at, voting_secret_hash, period_days, vote_duration_hours,
+      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+  stmt.run(
+    newId,
+    baseVote.title,
+    JSON.stringify(baseVote.options),
+    baseVote.write_secret_hash,
+    baseVote.voter_names_required ? 1 : 0,
+    autoCloseAt,
+    baseVote.voting_secret_hash,
+    baseVote.period_days,
+    baseVote.vote_duration_hours,
+    recurrenceStartAt,
+    baseVote.recurrence_group_id,
+    baseVote.integration_id,
+    1 // Keep recurrence active
+  )
+  return getVote(newId)!
+}
+
+export function setVoteRecurrence(
+  id: string,
+  periodDays: number | null,
+  voteDurationHours: number | null,
+  recurrenceGroupId: string | null,
+  integrationId: number | null,
+  recurrenceActive: boolean
+): void {
+  const stmt = db.prepare(`
+    UPDATE votes SET
+      period_days = ?,
+      vote_duration_hours = ?,
+      recurrence_group_id = ?,
+      integration_id = ?,
+      recurrence_active = ?
+    WHERE id = ?
+  `)
+  stmt.run(
+    periodDays,
+    voteDurationHours,
+    recurrenceGroupId,
+    integrationId,
+    recurrenceActive ? 1 : 0,
+    id
+  )
+}
+
+/**
+ * Stop a recurring vote group - prevents new instances from being created
+ * Updates the latest vote in the group to set recurrence_active = false
+ */
+export function stopRecurringVoteGroup(recurrenceGroupId: string): void {
+  const stmt = db.prepare(`
+    UPDATE votes SET recurrence_active = 0
+    WHERE recurrence_group_id = ?
+  `)
+  stmt.run(recurrenceGroupId)
+}
+
+/**
+ * Count the number of active recurring vote groups
+ * Used for enforcing system limits on recurring votes
+ */
+export function countActiveRecurringVoteGroups(): number {
+  const stmt = db.prepare(`
+    SELECT COUNT(DISTINCT recurrence_group_id) as count
+    FROM votes
+    WHERE recurrence_active = 1
+    AND recurrence_group_id IS NOT NULL
+  `)
+  const row = stmt.get() as { count: number }
+  return row.count
+}
+
+/**
+ * Get all votes in a recurrence group (for migration/admin purposes)
+ */
+export function getVotesInRecurrenceGroup(recurrenceGroupId: string): Vote[] {
+  const stmt = db.prepare(`
+    SELECT * FROM votes
+    WHERE recurrence_group_id = ?
+    ORDER BY created_at DESC
+  `)
+  const rows = stmt.all(recurrenceGroupId) as any[]
+  return rows.map((row) => ({
+    ...row,
+    options: JSON.parse(row.options),
+    voter_names_required: Boolean(row.voter_names_required),
+    recurrence_active: Boolean(row.recurrence_active),
+  }))
+}
+
+/**
+ * Update recurring vote template settings for future instances
+ * This updates the latest vote in the group which will be used as template
+ */
+export function updateRecurringVoteTemplate(
+  recurrenceGroupId: string,
+  updates: {
+    title?: string
+    options?: string[]
+    periodDays?: number
+    voteDurationHours?: number
+    integrationId?: number | null
+  }
+): Vote | null {
+  const latest = getLatestVoteInRecurrenceGroup(recurrenceGroupId)
+  if (!latest) return null
+
+  const setClauses: string[] = []
+  const values: any[] = []
+
+  if (updates.title !== undefined) {
+    setClauses.push('title = ?')
+    values.push(updates.title)
+  }
+  if (updates.options !== undefined) {
+    setClauses.push('options = ?')
+    values.push(JSON.stringify(updates.options))
+  }
+  if (updates.periodDays !== undefined) {
+    setClauses.push('period_days = ?')
+    values.push(updates.periodDays)
+  }
+  if (updates.voteDurationHours !== undefined) {
+    setClauses.push('vote_duration_hours = ?')
+    values.push(updates.voteDurationHours)
+  }
+  if (updates.integrationId !== undefined) {
+    setClauses.push('integration_id = ?')
+    values.push(updates.integrationId)
+  }
+
+  if (setClauses.length === 0) return latest
+
+  values.push(latest.id)
+  const stmt = db.prepare(`UPDATE votes SET ${setClauses.join(', ')} WHERE id = ?`)
+  stmt.run(...values)
+
+  return getVote(latest.id)
 }
