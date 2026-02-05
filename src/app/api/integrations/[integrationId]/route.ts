@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIntegrationById, deleteIntegration, updateIntegration, IntegrationConfig } from '@/lib/db'
 import { notifyVoteClosed, notifyVoteCreated, notifyVoteOpened } from '@/lib/notifications'
-import { withBasePath } from '@/lib/paths'
+import { getBaseUrl, withBasePath } from '@/lib/paths'
 
 /**
  * Verify admin authentication via ADMIN_SECRET
@@ -163,7 +163,7 @@ export async function POST(
     const eventType = typeof body?.eventType === 'string' ? body.eventType : 'vote_opened'
     const surveyName = typeof body?.surveyName === 'string' ? body.surveyName : undefined
 
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3100'
+    const baseUrl = getBaseUrl()
     const voteId = 'test-vote'
     const voteUrl = `${baseUrl}${withBasePath(`/v/${voteId}`)}`
     const resultsUrl = `${baseUrl}${withBasePath(`/v/${voteId}/results`)}`

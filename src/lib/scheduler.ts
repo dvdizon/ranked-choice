@@ -25,7 +25,7 @@ import {
 } from './db'
 import { notifyVoteOpened, notifyVoteClosed } from './notifications'
 import { countIRV } from './irv'
-import { withBasePath } from './paths'
+import { getBaseUrl, withBasePath } from './paths'
 
 // Protection limits (configurable via environment variables)
 const MAX_RECURRING_VOTES_PER_TICK = parseInt(process.env.MAX_RECURRING_VOTES_PER_TICK || '10', 10)
@@ -33,13 +33,6 @@ const MAX_ACTIVE_RECURRING_GROUPS = parseInt(process.env.MAX_ACTIVE_RECURRING_GR
 
 // Store the cron task so we can stop it if needed
 let schedulerTask: ScheduledTask | null = null
-
-/**
- * Get the base URL for constructing vote links
- */
-function getBaseUrl(): string {
-  return process.env.BASE_URL || 'http://localhost:3100'
-}
 
 /**
  * Calculate the auto-close time for the next vote instance

@@ -10,14 +10,7 @@ import {
 } from './db'
 import { countIRV } from './irv'
 import { notifyVoteClosed } from './notifications'
-import { withBasePath } from './paths'
-
-/**
- * Get the base URL for constructing vote links
- */
-function getBaseUrl(): string {
-  return process.env.BASE_URL || 'http://localhost:3100'
-}
+import { getBaseUrl, withBasePath } from './paths'
 
 /**
  * Send a vote closed notification if the vote has an integration configured

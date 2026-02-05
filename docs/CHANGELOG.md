@@ -34,6 +34,7 @@ This document tracks work history, including what was implemented by AI agents a
 - **Create Vote UI** - Moved Discord notification inputs into the advanced options tab (integration ID + admin API secret)
 - **Decision Records** - Moved decision records out of `PLAN.md` into `docs/decisions/`
 - **System Admin UI** - Styled the re-create vote action to match the rest of the button UI for clearer live vote actions
+- **Discord Notification Links** - Prevented double base-path prefixes in notification URLs when `BASE_URL` already includes `/rcv`
 
 ---
 
