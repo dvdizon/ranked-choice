@@ -12,6 +12,8 @@ This document tracks work history, including what was implemented by AI agents a
 - **System Admin Live Votes** - Added a paginated list of live votes to `/system` with close, delete, and re-create actions
   - New admin endpoints for listing live votes and closing/deleting by ADMIN_SECRET
   - Re-create action pre-fills the create vote form with the original settings
+- **Discord Test Notifications** - Send test messages for integrations from `/system` or `POST /api/integrations/:id`
+  - Supports `vote_opened`, `vote_created`, and `vote_closed` test payloads
 
 ### Changed
 - **Discord Notification Messages** - Discord notifications now include the voting secret in the voting link for easier access
@@ -19,6 +21,8 @@ This document tracks work history, including what was implemented by AI agents a
   - Results link does not include the secret (public access)
   - Added `voting_secret_plaintext` column to votes table for recurring votes with integrations
   - Backward compatible: existing recurring votes continue working without secrets in links
+- **Recurring Vote Notifications** - Vote notifications now fire when voting opens (`recurrence_start_at`) instead of vote creation time
+  - Adds `open_notified_at` tracking to prevent duplicate notifications
 - **Create Vote UI** - Improved discoverability of advanced options
   - Advanced options now always visible with clear visual separation
   - Removed toggle button - advanced section now has dedicated heading and border

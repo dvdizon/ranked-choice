@@ -136,7 +136,7 @@ When creating a new release:
 - Local dev path: `./data/rcv.sqlite`
 
 #### Schema
-- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voting_secret_plaintext` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voting_secret_plaintext` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `open_notified_at` (TEXT, nullable), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
 - **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
 - **api_keys table**: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
 - **integrations table**: `id`, `type` (discord/slack/webhook), `name`, `config` (JSON), `created_at`

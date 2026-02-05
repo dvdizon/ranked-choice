@@ -36,7 +36,8 @@ db.exec(`
     write_secret_hash TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now')),
     closed_at TEXT,
-    auto_close_at TEXT
+    auto_close_at TEXT,
+    open_notified_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ballots (
@@ -131,6 +132,13 @@ try {
   // Column already exists, ignore error
 }
 
+// Migration: Add open_notified_at column if it doesn't exist
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN open_notified_at TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
 // Create integrations table
 db.exec(`
   CREATE TABLE IF NOT EXISTS integrations (
@@ -154,6 +162,7 @@ export interface Vote {
   created_at: string
   closed_at: string | null
   auto_close_at: string | null
+  open_notified_at: string | null
   voter_names_required: boolean
   period_days: number | null
   vote_duration_hours: number | null
@@ -247,10 +256,10 @@ export function createVote(
   const stmt = db.prepare(`
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
-      auto_close_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
+      auto_close_at, open_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
       recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     id,
@@ -259,6 +268,7 @@ export function createVote(
     writeSecretHash,
     voterNamesRequired ? 1 : 0,
     autoCloseAt,
+    null,
     votingSecretHash,
     votingSecretPlaintext,
     periodDays,
@@ -594,10 +604,10 @@ export function createNextRecurringVote(
   const stmt = db.prepare(`
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
-      auto_close_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
+      auto_close_at, open_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
       recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     newId,
@@ -606,6 +616,7 @@ export function createNextRecurringVote(
     baseVote.write_secret_hash,
     baseVote.voter_names_required ? 1 : 0,
     autoCloseAt,
+    null,
     baseVote.voting_secret_hash,
     baseVote.voting_secret_plaintext,
     baseVote.period_days,
@@ -688,6 +699,34 @@ export function getVotesInRecurrenceGroup(recurrenceGroupId: string): Vote[] {
     voter_names_required: Boolean(row.voter_names_required),
     recurrence_active: Boolean(row.recurrence_active),
   }))
+}
+
+/**
+ * Find votes that should send an "open" notification
+ */
+export function getVotesNeedingOpenNotification(): Vote[] {
+  const stmt = db.prepare(`
+    SELECT * FROM votes
+    WHERE recurrence_start_at IS NOT NULL
+      AND closed_at IS NULL
+      AND open_notified_at IS NULL
+      AND datetime(recurrence_start_at) <= datetime('now')
+  `)
+  const rows = stmt.all() as any[]
+  return rows.map((row) => ({
+    ...row,
+    options: JSON.parse(row.options),
+    voter_names_required: Boolean(row.voter_names_required),
+    recurrence_active: Boolean(row.recurrence_active),
+  }))
+}
+
+/**
+ * Mark a vote as having sent the "open" notification
+ */
+export function setVoteOpenNotifiedAt(id: string, timestamp: string): void {
+  const stmt = db.prepare('UPDATE votes SET open_notified_at = ? WHERE id = ?')
+  stmt.run(timestamp, id)
 }
 
 /**

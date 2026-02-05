@@ -12,6 +12,7 @@ import {
 } from './db'
 import {
   sendVoteCreatedNotification as sendDiscordVoteCreated,
+  sendVoteOpenNotification as sendDiscordVoteOpened,
   sendVoteClosedNotification as sendDiscordVoteClosed,
 } from './discord'
 
@@ -31,6 +32,14 @@ export interface VoteClosedEvent {
   surveyName?: string
 }
 
+export interface VoteOpenedEvent {
+  title: string
+  voteUrl: string
+  resultsUrl: string
+  autoCloseAt?: string | null
+  surveyName?: string
+}
+
 /**
  * Send a vote created notification via the specified integration
  * Fire-and-forget: logs errors but doesn't throw
@@ -46,6 +55,23 @@ export async function notifyVoteCreated(
   }
 
   return sendNotification(integration, 'vote_created', event)
+}
+
+/**
+ * Send a vote opened notification via the specified integration
+ * Fire-and-forget: logs errors but doesn't throw
+ */
+export async function notifyVoteOpened(
+  integrationId: number,
+  event: VoteOpenedEvent
+): Promise<boolean> {
+  const integration = getIntegrationById(integrationId)
+  if (!integration) {
+    console.error(`Integration not found: ${integrationId}`)
+    return false
+  }
+
+  return sendNotification(integration, 'vote_opened', event)
 }
 
 /**
@@ -70,8 +96,8 @@ export async function notifyVoteClosed(
  */
 async function sendNotification(
   integration: Integration,
-  eventType: 'vote_created' | 'vote_closed',
-  event: VoteCreatedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
 ): Promise<boolean> {
   switch (integration.type) {
     case 'discord':
@@ -91,12 +117,21 @@ async function sendNotification(
  */
 async function handleDiscordNotification(
   config: DiscordIntegrationConfig,
-  eventType: 'vote_created' | 'vote_closed',
-  event: VoteCreatedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
 ): Promise<boolean> {
   if (eventType === 'vote_created') {
     const e = event as VoteCreatedEvent
     return sendDiscordVoteCreated(config.webhook_url, {
+      title: e.title,
+      voteUrl: e.voteUrl,
+      resultsUrl: e.resultsUrl,
+      autoCloseAt: e.autoCloseAt,
+      surveyName: e.surveyName,
+    })
+  } else if (eventType === 'vote_opened') {
+    const e = event as VoteOpenedEvent
+    return sendDiscordVoteOpened(config.webhook_url, {
       title: e.title,
       voteUrl: e.voteUrl,
       resultsUrl: e.resultsUrl,
@@ -120,29 +155,35 @@ async function handleDiscordNotification(
  */
 async function handleSlackNotification(
   config: SlackIntegrationConfig,
-  eventType: 'vote_created' | 'vote_closed',
-  event: VoteCreatedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
 ): Promise<boolean> {
   try {
     let blocks: any[]
 
-    if (eventType === 'vote_created') {
+    if (eventType === 'vote_created' || eventType === 'vote_opened') {
       const e = event as VoteCreatedEvent
+      const headerText = eventType === 'vote_created' ? `New Vote: ${e.title}` : `Voting Open: ${e.title}`
+      const description = eventType === 'vote_created'
+        ? (e.surveyName
+          ? `A new voting session has started for *${e.surveyName}*`
+          : 'A new voting session has started!')
+        : (e.surveyName
+          ? `Voting is now open for *${e.surveyName}*`
+          : 'Voting is now open!')
       blocks = [
         {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: `New Vote: ${e.title}`,
+            text: headerText,
           },
         },
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: e.surveyName
-              ? `A new voting session has started for *${e.surveyName}*`
-              : 'A new voting session has started!',
+            text: description,
           },
         },
         {
@@ -236,8 +277,8 @@ async function handleSlackNotification(
  */
 async function handleGenericWebhook(
   config: WebhookIntegrationConfig,
-  eventType: 'vote_created' | 'vote_closed',
-  event: VoteCreatedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
 ): Promise<boolean> {
   try {
     const payload = {

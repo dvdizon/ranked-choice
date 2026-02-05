@@ -20,6 +20,7 @@ Each record captures a product or architecture decision that affects behavior, U
 - **DR-2026-01-31-04** — Notifications Tab in Create Vote Advanced Options (`DR-2026-01-31-04.md`)
 - **DR-2026-01-31-05** — Consistent Button Styling for System Admin Re-create Action (`DR-2026-01-31-05.md`)
 - **DR-2026-02-01-01** — System Admin Live Vote Management (`DR-2026-02-01-01.md`)
+- **DR-2026-02-05-01** — Vote Open Notifications + Integration Test Messages (`DR-2026-02-05-01.md`)
 
 ## Decision Record Template
 

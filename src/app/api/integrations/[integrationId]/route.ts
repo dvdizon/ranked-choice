@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIntegrationById, deleteIntegration, updateIntegration, IntegrationConfig } from '@/lib/db'
+import { notifyVoteClosed, notifyVoteCreated, notifyVoteOpened } from '@/lib/notifications'
+import { withBasePath } from '@/lib/paths'
 
 /**
  * Verify admin authentication via ADMIN_SECRET
@@ -129,6 +131,79 @@ export async function DELETE(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting integration:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * POST /api/integrations/[integrationId] - Send a test notification
+ * Requires ADMIN_SECRET authentication
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ integrationId: string }> }
+) {
+  try {
+    if (!verifyAdminAuth(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { integrationId } = await params
+    const id = parseInt(integrationId, 10)
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'Invalid integration ID' }, { status: 400 })
+    }
+
+    const integration = getIntegrationById(id)
+    if (!integration) {
+      return NextResponse.json({ error: 'Integration not found' }, { status: 404 })
+    }
+
+    const body = await request.json().catch(() => ({}))
+    const eventType = typeof body?.eventType === 'string' ? body.eventType : 'vote_opened'
+    const surveyName = typeof body?.surveyName === 'string' ? body.surveyName : undefined
+
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3100'
+    const voteId = 'test-vote'
+    const voteUrl = `${baseUrl}${withBasePath(`/v/${voteId}`)}`
+    const resultsUrl = `${baseUrl}${withBasePath(`/v/${voteId}/results`)}`
+    const autoCloseAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+
+    let sent = false
+    if (eventType === 'vote_created') {
+      sent = await notifyVoteCreated(id, {
+        title: 'Test Vote (Created)',
+        voteUrl,
+        resultsUrl,
+        autoCloseAt,
+        surveyName,
+      })
+    } else if (eventType === 'vote_opened') {
+      sent = await notifyVoteOpened(id, {
+        title: 'Test Vote (Open)',
+        voteUrl,
+        resultsUrl,
+        autoCloseAt,
+        surveyName,
+      })
+    } else if (eventType === 'vote_closed') {
+      sent = await notifyVoteClosed(id, {
+        title: 'Test Vote (Closed)',
+        resultsUrl,
+        winner: 'Option A',
+        totalBallots: 17,
+        surveyName,
+      })
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid eventType. Use vote_created, vote_opened, or vote_closed.' },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ success: sent })
+  } catch (error) {
+    console.error('Error sending test notification:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
