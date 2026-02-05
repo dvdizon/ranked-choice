@@ -76,6 +76,7 @@ npm test
    - Start date/time (when voting opens)
    - Enable recurring votes (min 7-day period)
    - Set vote duration (hours) for each recurring instance
+   - Notifications send when the vote opens and when it closes
 7. Optionally manage Discord integrations on the System Admin page (`/system`):
    - Validate `ADMIN_SECRET` to access integration controls
    - Create integrations and copy the integration ID
@@ -144,6 +145,7 @@ You'll receive three URLs:
    - Create a new Discord integration (webhook URL required)
    - Load and delete existing integrations
    - Copy the integration ID for use when creating a vote
+   - Send a test message to verify the Discord webhook
 
 ### Programmatic Access (API)
 
@@ -267,7 +269,7 @@ See `.github/workflows/ci.yml` for full configuration details.
 - **Custom Options**: Voters can suggest new options dynamically
 - **Auto-Close**: Set automatic voting deadline with date/time picker
 - **Recurring Votes**: Schedule votes to repeat on a weekly-or-longer cadence
-- **Discord Notifications**: Send vote created/closed messages via Discord webhooks
+- **Discord Notifications**: Send vote opened/closed messages via Discord webhooks
 - **Flexible Anonymity**: Vote creators choose whether names are required (default) or optional for anonymous voting
 - **Separate Admin and Voting Secrets**: Two distinct secrets for better access control
   - Admin secret for vote management (admin panel, editing, deleting)

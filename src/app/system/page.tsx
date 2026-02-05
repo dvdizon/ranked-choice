@@ -44,6 +44,10 @@ export default function SystemAdminPage() {
   const [integrationCreateError, setIntegrationCreateError] = useState('')
   const [integrationDeleteLoading, setIntegrationDeleteLoading] = useState(false)
   const [integrationDeleteError, setIntegrationDeleteError] = useState('')
+  const [integrationTestLoading, setIntegrationTestLoading] = useState(false)
+  const [integrationTestError, setIntegrationTestError] = useState('')
+  const [integrationTestSuccess, setIntegrationTestSuccess] = useState('')
+  const [integrationTestEventType, setIntegrationTestEventType] = useState('vote_opened')
   const [liveVotes, setLiveVotes] = useState<LiveVoteSummary[]>([])
   const [liveVotesLoading, setLiveVotesLoading] = useState(false)
   const [liveVotesError, setLiveVotesError] = useState('')
@@ -293,6 +297,47 @@ export default function SystemAdminPage() {
       setIntegrationDeleteError('Network error while deleting integration.')
     } finally {
       setIntegrationDeleteLoading(false)
+    }
+  }
+
+  const sendTestNotification = async () => {
+    if (!adminSecretValidated) {
+      setIntegrationTestError('Admin secret validation is required.')
+      return
+    }
+
+    if (!integrationId.trim()) {
+      setIntegrationTestError('Select an integration to test.')
+      return
+    }
+
+    setIntegrationTestError('')
+    setIntegrationTestSuccess('')
+    setIntegrationTestLoading(true)
+
+    try {
+      const res = await fetch(withBasePath(`/api/integrations/${integrationId}`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
+        },
+        body: JSON.stringify({
+          eventType: integrationTestEventType,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setIntegrationTestError(data.error || 'Failed to send test notification')
+        setIntegrationTestLoading(false)
+        return
+      }
+
+      setIntegrationTestSuccess('Test notification sent.')
+    } catch (err) {
+      setIntegrationTestError('Network error while sending test notification.')
+    } finally {
+      setIntegrationTestLoading(false)
     }
   }
 
@@ -627,6 +672,25 @@ export default function SystemAdminPage() {
                 >
                   Clear selection
                 </button>
+                <select
+                  aria-label="Test notification type"
+                  value={integrationTestEventType}
+                  onChange={(e) => setIntegrationTestEventType(e.target.value)}
+                  className="input-large"
+                  style={{ maxWidth: '12rem' }}
+                >
+                  <option value="vote_opened">Test vote open</option>
+                  <option value="vote_created">Test vote created</option>
+                  <option value="vote_closed">Test vote closed</option>
+                </select>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={sendTestNotification}
+                  disabled={integrationTestLoading || !integrationId}
+                >
+                  {integrationTestLoading ? 'Sending...' : 'Send test message'}
+                </button>
                 <button
                   type="button"
                   className="btn-secondary"
@@ -636,6 +700,12 @@ export default function SystemAdminPage() {
                   {integrationDeleteLoading ? 'Removing...' : 'Delete integration'}
                 </button>
               </div>
+              {integrationTestError && (
+                <p className="error" style={{ marginTop: '0.5rem' }}>{integrationTestError}</p>
+              )}
+              {integrationTestSuccess && (
+                <p className="muted" style={{ marginTop: '0.5rem' }}>{integrationTestSuccess}</p>
+              )}
               {integrationDeleteError && (
                 <p className="error" style={{ marginTop: '0.5rem' }}>{integrationDeleteError}</p>
               )}

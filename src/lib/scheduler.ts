@@ -19,9 +19,11 @@ import {
   getLatestVoteInRecurrenceGroup,
   getBallotsByVoteId,
   countActiveRecurringVoteGroups,
+  getVotesNeedingOpenNotification,
+  setVoteOpenNotifiedAt,
   Vote,
 } from './db'
-import { notifyVoteCreated, notifyVoteClosed } from './notifications'
+import { notifyVoteOpened, notifyVoteClosed } from './notifications'
 import { countIRV } from './irv'
 import { withBasePath } from './paths'
 
@@ -68,31 +70,6 @@ function generateRecurringVoteId(recurrenceGroupId: string): string {
 }
 
 /**
- * Send a vote created notification
- */
-async function sendVoteCreatedNotificationForVote(vote: Vote): Promise<void> {
-  if (!vote.integration_id) return
-
-  try {
-    const baseUrl = getBaseUrl()
-    const votePath = `${baseUrl}${withBasePath(`/v/${vote.id}`)}`
-    const voteUrl = vote.voting_secret_plaintext
-      ? `${votePath}?secret=${encodeURIComponent(vote.voting_secret_plaintext)}`
-      : votePath
-
-    await notifyVoteCreated(vote.integration_id, {
-      title: vote.title,
-      voteUrl,
-      resultsUrl: `${baseUrl}${withBasePath(`/v/${vote.id}/results`)}`,
-      autoCloseAt: vote.auto_close_at,
-    })
-    console.log(`[Scheduler] Sent vote created notification for: ${vote.id}`)
-  } catch (error) {
-    console.error(`[Scheduler] Failed to send vote created notification for ${vote.id}:`, error)
-  }
-}
-
-/**
  * Send a vote closed notification
  */
 async function sendVoteClosedNotification(vote: Vote): Promise<void> {
@@ -125,6 +102,55 @@ async function sendVoteClosedNotification(vote: Vote): Promise<void> {
 }
 
 /**
+ * Send a vote opened notification
+ */
+async function sendVoteOpenedNotification(vote: Vote): Promise<boolean> {
+  if (!vote.integration_id) return false
+
+  try {
+    const baseUrl = getBaseUrl()
+    const votePath = `${baseUrl}${withBasePath(`/v/${vote.id}`)}`
+    const voteUrl = vote.voting_secret_plaintext
+      ? `${votePath}?secret=${encodeURIComponent(vote.voting_secret_plaintext)}`
+      : votePath
+
+    const sent = await notifyVoteOpened(vote.integration_id, {
+      title: vote.title,
+      voteUrl,
+      resultsUrl: `${baseUrl}${withBasePath(`/v/${vote.id}/results`)}`,
+      autoCloseAt: vote.auto_close_at,
+    })
+
+    if (sent) {
+      console.log(`[Scheduler] Sent vote opened notification for: ${vote.id}`)
+    }
+
+    return sent
+  } catch (error) {
+    console.error(`[Scheduler] Failed to send vote opened notification for ${vote.id}:`, error)
+    return false
+  }
+}
+
+/**
+ * Send vote opened notifications for votes whose start time has arrived
+ */
+async function processOpenNotifications(): Promise<void> {
+  const votesToNotify = getVotesNeedingOpenNotification()
+
+  for (const vote of votesToNotify) {
+    if (!vote.integration_id) {
+      continue
+    }
+
+    const sent = await sendVoteOpenedNotification(vote)
+    if (sent) {
+      setVoteOpenNotifiedAt(vote.id, new Date().toISOString())
+    }
+  }
+}
+
+/**
  * Process a closed recurring vote - create next instance and send notifications
  */
 async function processClosedRecurringVote(closedVote: Vote): Promise<void> {
@@ -148,11 +174,6 @@ async function processClosedRecurringVote(closedVote: Vote): Promise<void> {
       nextStartAt.toISOString()
     )
     console.log(`[Scheduler] Created new recurring vote: ${newVote.id} (closes at ${autoCloseAt})`)
-
-    // Send vote created notification for the new vote
-    if (newVote.integration_id) {
-      await sendVoteCreatedNotificationForVote(newVote)
-    }
   } catch (error) {
     console.error(`[Scheduler] Error processing recurring vote ${closedVote.id}:`, error)
   }
@@ -189,6 +210,8 @@ async function schedulerTick(): Promise<void> {
   for (const vote of votesToProcess) {
     await processClosedRecurringVote(vote)
   }
+
+  await processOpenNotifications()
 }
 
 /**
@@ -290,11 +313,6 @@ export async function triggerNextVoteInstance(recurrenceGroupId: string): Promis
     nextStartAt.toISOString()
   )
   console.log(`[Scheduler] Manually triggered new vote: ${newVote.id}`)
-
-  // Send notification if integration is configured
-  if (newVote.integration_id) {
-    await sendVoteCreatedNotificationForVote(newVote)
-  }
 
   return newVote
 }

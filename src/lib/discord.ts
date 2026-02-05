@@ -114,6 +114,56 @@ export async function sendVoteCreatedNotification(
 }
 
 /**
+ * Send a vote opened notification to Discord
+ */
+export async function sendVoteOpenNotification(
+  webhookUrl: string,
+  options: {
+    title: string
+    voteUrl: string
+    resultsUrl: string
+    autoCloseAt?: string | null
+    surveyName?: string
+  }
+): Promise<boolean> {
+  const fields: DiscordEmbed['fields'] = [
+    {
+      name: 'Vote',
+      value: `[Cast your vote](${options.voteUrl})`,
+      inline: true,
+    },
+    {
+      name: 'Results',
+      value: `[View results](${options.resultsUrl})`,
+      inline: true,
+    },
+  ]
+
+  if (options.autoCloseAt) {
+    const closeDate = new Date(options.autoCloseAt)
+    fields.push({
+      name: 'Voting Closes',
+      value: `<t:${Math.floor(closeDate.getTime() / 1000)}:R>`,
+      inline: false,
+    })
+  }
+
+  const embed: DiscordEmbed = {
+    title: `Voting Open: ${options.title}`,
+    description: options.surveyName
+      ? `Voting is now open for **${options.surveyName}**`
+      : 'Voting is now open!',
+    color: DISCORD_COLORS.info,
+    fields,
+    timestamp: new Date().toISOString(),
+  }
+
+  return sendDiscordWebhook(webhookUrl, {
+    embeds: [embed],
+  })
+}
+
+/**
  * Send a vote closed notification to Discord
  */
 export async function sendVoteClosedNotification(

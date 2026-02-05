@@ -658,6 +658,41 @@ Authorization: Bearer <ADMIN_SECRET>
 
 ---
 
+### Send Test Notification
+
+**POST** `/api/integrations/:id`
+
+Send a test notification message to verify the integration.
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Request Body:**
+
+```json
+{
+  "eventType": "vote_opened"
+}
+```
+
+Allowed `eventType` values:
+- `vote_opened` (default)
+- `vote_created`
+- `vote_closed`
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
 ## Error Responses
 
 All endpoints return errors in the following format:
