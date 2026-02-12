@@ -56,7 +56,7 @@ describe('IRV Algorithm', () => {
 
       const result = countIRV(options, ballots)
 
-      // Round 1: A=2, B=3, C=2 - A eliminated (tie-break: A < C lexicographically)
+      // Round 1: A=2, B=3, C=2 - A eliminated (weighted tie-break favors C)
       // Round 2: B=3, C=2 (2 ballots exhausted) - B wins with >50% of active
       expect(result.winner).toBe('B')
       expect(result.rounds[0].eliminated).toBe('A')
@@ -102,6 +102,25 @@ describe('IRV Algorithm', () => {
   })
 
   describe('Tie handling', () => {
+
+
+    it('should use weighted ranking support before first-round totals in elimination ties', () => {
+      const options = ['A', 'B', 'C', 'D']
+      const ballots: IRVBallot[] = [
+        { rankings: ['A', 'B', 'C', 'D'] },
+        { rankings: ['A', 'B', 'D', 'C'] },
+        { rankings: ['B', 'D', 'C', 'A'] },
+        { rankings: ['B', 'D', 'C', 'A'] },
+        { rankings: ['C', 'D', 'B', 'A'] },
+        { rankings: ['D', 'C', 'B', 'A'] },
+      ]
+
+      const result = countIRV(options, ballots)
+
+      // Round 1 tallies: A=2, B=2, C=1, D=1
+      // C and D tie on first-choice votes; weighted ranking support eliminates C first.
+      expect(result.rounds[0].eliminated).toBe('C')
+    })
     it('should break tie using first-round totals', () => {
       const options = ['A', 'B', 'C']
       // A=2, B=2, C=1 in first round
@@ -203,7 +222,7 @@ describe('IRV Algorithm', () => {
 
       const result = countIRV(options, ballots)
 
-      // Round 1: A=3, B=2, C=2, D=2 - B eliminated (tie-break: B < C < D)
+      // Round 1: A=3, B=2, C=2, D=2 - B eliminated (weighted tie-break)
       // Round 2: A=3, C=4, D=2 - D eliminated
       // Round 3: A=3, C=6 - C wins
       expect(result.winner).toBe('C')

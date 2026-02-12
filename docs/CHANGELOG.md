@@ -9,6 +9,17 @@ This document tracks work history, including what was implemented by AI agents a
 ## [Unreleased]
 
 ### Added
+- **Contest ID Visibility** - Vote and results pages now show the contest ID under the title so closed or shared contests are easier to identify.
+- **Mobile Drag Handle UX** - Ranking rows now use a dedicated ☰ drag handle to reduce accidental reordering while scrolling on touch devices.
+
+### Changed
+- **IRV Tie-Breaking** - Elimination ties now use weighted ranking support before first-round totals and lexicographic fallback.
+
+### Fixed
+- **Recurring Notification Timing** - Close notifications are now sent when votes actually close (manual or auto-close) instead of being delayed until the next recurring instance.
+- **Late Open Alerts** - Scheduler now closes expired votes before open-notification checks to prevent false "vote opened" notifications after a vote should already be closed.
+
+### Added
 - **System Admin Live Votes** - Added a paginated list of live votes to `/system` with close, delete, and re-create actions
   - New admin endpoints for listing live votes and closing/deleting by ADMIN_SECRET
   - Re-create action pre-fills the create vote form with the original settings

@@ -136,7 +136,7 @@ When creating a new release:
 - Local dev path: `./data/rcv.sqlite`
 
 #### Schema
-- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voting_secret_plaintext` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `open_notified_at` (TEXT, nullable), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voting_secret_plaintext` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `open_notified_at` (TEXT, nullable), `closed_notified_at` (TEXT, nullable), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
 - **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
 - **api_keys table**: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
 - **integrations table**: `id`, `type` (discord/slack/webhook), `name`, `config` (JSON), `created_at`
@@ -256,9 +256,10 @@ location /health {
 - **Custom Options**: Voters can suggest new options (added dynamically for all voters)
 - **Optional Voter Names**: Vote creators choose whether names are required (default) or optional; enables both coordinated and anonymous voting
 - **Auto-Close**: Set automatic voting deadline with date/time picker
-- **Drag & Drop**: Reorder rankings with touch/mouse support (@dnd-kit)
+- **Drag & Drop**: Reorder rankings with touch/mouse support (@dnd-kit) using dedicated drag handles on each row
 - **Persistent Options**: Vote creator's last-used options saved in localStorage
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
+- **Contest Identification**: Vote and results pages display both contest title and vote ID
 
 ### Admin Capabilities
 - **Separate Secrets**: Admin secret (for management) vs Voting secret (for ballot submission)
@@ -290,7 +291,7 @@ From PLAN.md - do not modify without recording a Decision Record in `docs/decisi
 - **Majority**: >50% of active (non-exhausted) ballots
 - **Elimination**: Remove option with fewest votes each round
 - **Exhausted ballots**: Drop out when all ranked options eliminated
-- **Tie-breaking**: Lowest first-round total, then lexicographic; if still tied, declare tie
+- **Tie-breaking**: Lowest weighted ranking support, then lowest first-round total, then lexicographic; if still tied, declare tie
 
 ## What NOT to Do
 

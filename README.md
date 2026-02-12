@@ -24,6 +24,7 @@ Ranked Choice Voting App lets a group:
 It uses **Instant-Runoff Voting (IRV)**:
 - Majority (>50%) wins
 - Lowest option is eliminated each round
+- Ties for elimination use weighted ranking support, then first-round totals, then option ID
 - Ballots are redistributed until a winner (or tie) is reached
 
 ---
@@ -101,7 +102,7 @@ You'll receive three URLs:
 
 1. Go to `/v/<vote-id>`
 2. All options start ranked in random order
-3. Reorder by dragging or using ↑/↓ buttons
+3. Reorder by dragging the ☰ handle or using ↑/↓ buttons
 4. Remove options you don't want by clicking ×
 5. Optionally add custom options with "+ Add Custom Option"
 6. Enter your name (required or optional based on vote settings)
@@ -117,7 +118,7 @@ You'll receive three URLs:
 ### Viewing Results
 
 1. Go to `/v/<vote-id>/results`
-2. See the winner (or tie)
+2. See the winner (or tie), with contest title and ID shown at the top for clarity
 3. View round-by-round elimination details
 4. See all submitted ballots with voter names (or "Anonymous" if name not provided)
 

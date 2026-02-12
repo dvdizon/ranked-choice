@@ -136,6 +136,9 @@ export default function ResultsPage() {
   return (
     <div className="fade-in">
       <h1>{vote.title}</h1>
+      <p className="muted" style={{ marginBottom: '0.5rem' }}>
+        Contest ID: <code>{vote.id}</code>
+      </p>
       <p className="muted" style={{ marginBottom: '1.5rem' }}>
         Results • {results.totalBallots} ballot{results.totalBallots !== 1 ? 's' : ''} cast
       </p>

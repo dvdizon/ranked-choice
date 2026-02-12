@@ -103,7 +103,7 @@ These rules are **locked unless explicitly changed**:
 - Elimination:
   - Eliminate option with the fewest votes in the round
 - Tie-breaking:
-  - Deterministic (e.g., lowest first-round total, then lexicographic option ID)
+  - Deterministic (lowest weighted ranking support, then lowest first-round total, then lexicographic option ID)
   - If still tied, declare a tie and stop
 
 Any change to these rules **must be recorded in `docs/decisions/`**.
@@ -307,6 +307,9 @@ All meaningful behavior changes must be logged here.
 - 2026-01-31 — Styled system admin re-create vote action to match button UI
 - 2026-02-05 — Send recurring vote notifications when voting opens (recurrence_start_at) and add Discord test messages
 - 2026-02-05 — Fixed Discord notification URLs to avoid double `/rcv` when BASE_URL already includes the base path
+- 2026-02-12 — Added weighted elimination tie-breaker for IRV and mobile drag handles with dedicated grip control
+- 2026-02-12 — Added contest ID display on vote and results pages for easier identification
+- 2026-02-12 — Fixed recurring notifications to avoid delayed close notices and late open alerts after auto-close
 
 ---
 
