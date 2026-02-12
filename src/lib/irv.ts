@@ -5,7 +5,7 @@
  * - Majority threshold: >50% of active (non-exhausted) ballots
  * - Exhausted ballots: If all ranked options are eliminated, ballot no longer counts
  * - Elimination: Eliminate option with the fewest votes in the round
- * - Tie-breaking: Deterministic (lowest first-round total, then lexicographic option ID)
+ * - Tie-breaking: Deterministic (weighted ranking support, then lowest first-round total, then lexicographic option ID)
  * - If still tied, declare a tie and stop
  */
 
@@ -142,7 +142,7 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
       toEliminate = lowestOptions[0]
     } else {
       // Tie-break: lowest first-round total
-      toEliminate = breakTie(lowestOptions, firstRoundTallies!)
+      toEliminate = breakTie(lowestOptions, firstRoundTallies!, ballots)
     }
 
     rounds.push({
@@ -205,15 +205,37 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
 
 /**
  * Break a tie using deterministic rules:
- * 1. Lowest first-round total
- * 2. Lexicographic option ID (alphabetically first)
+ * 1. Lowest weighted ranking support (across all ballot rankings)
+ * 2. Lowest first-round total
+ * 3. Lexicographic option ID (alphabetically first)
  */
 function breakTie(
   tiedOptions: string[],
-  firstRoundTallies: Record<string, number>
+  firstRoundTallies: Record<string, number>,
+  ballots: IRVBallot[]
 ): string {
-  // Sort by first-round tallies (ascending), then lexicographically
+  const weightedScores: Record<string, number> = {}
+
+  for (const option of tiedOptions) {
+    let score = 0
+    for (const ballot of ballots) {
+      const rankIndex = ballot.rankings.indexOf(option)
+      if (rankIndex === -1) continue
+
+      // Higher-ranked options receive more points: rank #1 gets N points, #2 gets N-1, etc.
+      score += Math.max(ballot.rankings.length - rankIndex, 0)
+    }
+    weightedScores[option] = score
+  }
+
+  // Sort by weighted score (ascending), then first-round tallies (ascending), then lexicographically
   const sorted = [...tiedOptions].sort((a, b) => {
+    const aScore = weightedScores[a] ?? 0
+    const bScore = weightedScores[b] ?? 0
+    if (aScore !== bScore) {
+      return aScore - bScore
+    }
+
     const aVotes = firstRoundTallies[a] ?? 0
     const bVotes = firstRoundTallies[b] ?? 0
     if (aVotes !== bVotes) {

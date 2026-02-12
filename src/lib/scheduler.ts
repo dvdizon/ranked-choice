@@ -21,6 +21,9 @@ import {
   countActiveRecurringVoteGroups,
   getVotesNeedingOpenNotification,
   setVoteOpenNotifiedAt,
+  setVoteClosedNotifiedAt,
+  getVotesNeedingClosedNotification,
+  closeVote,
   Vote,
 } from './db'
 import { notifyVoteOpened, notifyVoteClosed } from './notifications'
@@ -65,8 +68,8 @@ function generateRecurringVoteId(recurrenceGroupId: string): string {
 /**
  * Send a vote closed notification
  */
-async function sendVoteClosedNotification(vote: Vote): Promise<void> {
-  if (!vote.integration_id) return
+async function sendVoteClosedNotification(vote: Vote): Promise<boolean> {
+  if (!vote.integration_id) return false
 
   try {
     const ballots = getBallotsByVoteId(vote.id)
@@ -81,16 +84,21 @@ async function sendVoteClosedNotification(vote: Vote): Promise<void> {
     }
 
     const baseUrl = getBaseUrl()
-    await notifyVoteClosed(vote.integration_id, {
+    const sent = await notifyVoteClosed(vote.integration_id, {
       title: vote.title,
       resultsUrl: `${baseUrl}${withBasePath(`/v/${vote.id}/results`)}`,
       winner,
       totalBallots: ballots.length,
     })
 
-    console.log(`[Scheduler] Sent vote closed notification for: ${vote.id}`)
+    if (sent) {
+      console.log(`[Scheduler] Sent vote closed notification for: ${vote.id}`)
+    }
+
+    return sent
   } catch (error) {
     console.error(`[Scheduler] Failed to send vote closed notification for ${vote.id}:`, error)
+    return false
   }
 }
 
@@ -126,6 +134,25 @@ async function sendVoteOpenedNotification(vote: Vote): Promise<boolean> {
 }
 
 /**
+ * Send vote closed notifications for votes that closed manually or hit auto-close
+ */
+async function processClosedNotifications(): Promise<void> {
+  const votesToNotify = getVotesNeedingClosedNotification()
+
+  for (const vote of votesToNotify) {
+    if (vote.closed_at === null && vote.auto_close_at && new Date(vote.auto_close_at) <= new Date()) {
+      closeVote(vote.id)
+      vote.closed_at = new Date().toISOString()
+    }
+
+    const sent = await sendVoteClosedNotification(vote)
+    if (sent) {
+      setVoteClosedNotifiedAt(vote.id, new Date().toISOString())
+    }
+  }
+}
+
+/**
  * Send vote opened notifications for votes whose start time has arrived
  */
 async function processOpenNotifications(): Promise<void> {
@@ -150,11 +177,6 @@ async function processClosedRecurringVote(closedVote: Vote): Promise<void> {
   console.log(`[Scheduler] Processing closed recurring vote: ${closedVote.id}`)
 
   try {
-    // Send vote closed notification for the closed vote
-    if (closedVote.integration_id) {
-      await sendVoteClosedNotification(closedVote)
-    }
-
     // Create the next vote instance
     const newVoteId = generateRecurringVoteId(closedVote.recurrence_group_id!)
     const nextStartAt = calculateNextStartAt(closedVote)
@@ -177,6 +199,8 @@ async function processClosedRecurringVote(closedVote: Vote): Promise<void> {
  * Enforces protection limits to prevent server overload
  */
 async function schedulerTick(): Promise<void> {
+  await processClosedNotifications()
+
   // Check system-wide limit on active recurring groups
   const activeGroups = countActiveRecurringVoteGroups()
   if (activeGroups >= MAX_ACTIVE_RECURRING_GROUPS) {

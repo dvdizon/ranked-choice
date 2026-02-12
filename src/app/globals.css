@@ -357,8 +357,7 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: 4px;
   margin-bottom: 0.5rem;
-  cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
 }
 
@@ -407,6 +406,28 @@ a:hover {
 
 .option-name {
   flex: 1;
+}
+
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: 4px;
+  cursor: grab;
+  touch-action: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .option-buttons {
@@ -619,5 +640,11 @@ a:focus-visible {
     min-width: 44px;
     min-height: 44px;
     font-size: 1rem;
+  }
+
+  .drag-handle {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 1.2rem;
   }
 }

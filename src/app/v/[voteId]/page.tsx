@@ -50,6 +50,7 @@ function SortableItem({ id, index, onMoveUp, onMoveDown, onRemove, isFirst, isLa
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -65,10 +66,19 @@ function SortableItem({ id, index, onMoveUp, onMoveDown, onRemove, isFirst, isLa
       ref={setNodeRef}
       style={style}
       className={`option-item ${isDragging ? 'dragging' : ''}`}
-      {...attributes}
-      {...listeners}
     >
       <span className="option-rank">{index + 1}</span>
+      <button
+        type="button"
+        className="drag-handle"
+        aria-label={`Drag to reorder ${id}`}
+        title="Drag to reorder"
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+      >
+        ☰
+      </button>
       <span className="option-name">{id}</span>
       <div className="option-buttons" onClick={(e) => e.stopPropagation()}>
         <button
@@ -388,6 +398,9 @@ export default function VotePage() {
   return (
     <div className="fade-in">
       <h1>{vote.title}</h1>
+      <p className="muted" style={{ marginBottom: '0.5rem' }}>
+        Contest ID: <code>{vote.id}</code>
+      </p>
       <p className="muted" style={{ marginBottom: '1.5rem' }}>
         {vote.ballotCount} ballot{vote.ballotCount !== 1 ? 's' : ''} submitted
       </p>
@@ -420,7 +433,7 @@ export default function VotePage() {
         <div style={{ marginBottom: '1.5rem' }}>
           <h2>Your Rankings</h2>
           <p className="muted" style={{ marginBottom: '0.5rem' }}>
-            Drag to reorder or click × to remove options you don&apos;t want. Your top choice should be #1.
+            Use the ☰ handle to drag and reorder, or click × to remove options you don&apos;t want. Your top choice should be #1.
           </p>
 
           <DndContext
