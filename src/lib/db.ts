@@ -38,7 +38,9 @@ db.exec(`
     closed_at TEXT,
     auto_close_at TEXT,
     open_notified_at TEXT,
-    closed_notified_at TEXT
+    closed_notified_at TEXT,
+    tie_runoff_created_at TEXT,
+    tie_runoff_vote_id TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ballots (
@@ -147,6 +149,19 @@ try {
   // Column already exists, ignore error
 }
 
+// Migration: Add tie runoff tracking columns if they don't exist
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN tie_runoff_created_at TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN tie_runoff_vote_id TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
 // Create integrations table
 db.exec(`
   CREATE TABLE IF NOT EXISTS integrations (
@@ -172,6 +187,8 @@ export interface Vote {
   auto_close_at: string | null
   open_notified_at: string | null
   closed_notified_at: string | null
+  tie_runoff_created_at: string | null
+  tie_runoff_vote_id: string | null
   voter_names_required: boolean
   period_days: number | null
   vote_duration_hours: number | null
@@ -266,9 +283,9 @@ export function createVote(
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
       auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
-      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
+      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     id,
@@ -286,7 +303,9 @@ export function createVote(
     recurrenceStartAt,
     recurrenceGroupId,
     integrationId,
-    recurrenceActive
+    recurrenceActive,
+    null,
+    null
   )
   return getVote(id)!
 }
@@ -615,9 +634,9 @@ export function createNextRecurringVote(
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
       auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
-      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active
+      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     newId,
@@ -635,7 +654,9 @@ export function createNextRecurringVote(
     recurrenceStartAt,
     baseVote.recurrence_group_id,
     baseVote.integration_id,
-    1 // Keep recurrence active
+    1, // Keep recurrence active
+    null,
+    null
   )
   return getVote(newId)!
 }
@@ -746,6 +767,36 @@ export function setVoteOpenNotifiedAt(id: string, timestamp: string): void {
 export function setVoteClosedNotifiedAt(id: string, timestamp: string): void {
   const stmt = db.prepare('UPDATE votes SET closed_notified_at = ? WHERE id = ?')
   stmt.run(timestamp, id)
+}
+
+/**
+ * Mark a vote as having created a runoff vote due to a pure tie.
+ */
+export function setTieRunoffCreated(id: string, runoffVoteId: string, timestamp: string): void {
+  const stmt = db.prepare('UPDATE votes SET tie_runoff_created_at = ?, tie_runoff_vote_id = ? WHERE id = ?')
+  stmt.run(timestamp, runoffVoteId, id)
+}
+
+/**
+ * Find votes eligible for automatic runoff creation after close.
+ */
+export function getVotesNeedingTieRunoff(): Vote[] {
+  const stmt = db.prepare(`
+    SELECT * FROM votes
+    WHERE integration_id IS NOT NULL
+      AND tie_runoff_created_at IS NULL
+      AND (
+        closed_at IS NOT NULL
+        OR (closed_at IS NULL AND auto_close_at IS NOT NULL AND datetime(auto_close_at) <= datetime('now'))
+      )
+  `)
+  const rows = stmt.all() as any[]
+  return rows.map((row) => ({
+    ...row,
+    options: JSON.parse(row.options),
+    voter_names_required: Boolean(row.voter_names_required),
+    recurrence_active: Boolean(row.recurrence_active),
+  }))
 }
 
 /**
