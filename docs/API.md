@@ -527,6 +527,7 @@ Authorization: Bearer <ADMIN_SECRET>
       "id": "team-lunch-2026",
       "title": "Friday Lunch",
       "options": ["Pizza", "Sushi", "Tacos"],
+      "write_secret_plaintext": "admin-secret-123",
       "created_at": "2026-02-01T12:00:00Z",
       "closed_at": null,
       "auto_close_at": "2026-02-02T12:00:00Z",

@@ -34,6 +34,7 @@ db.exec(`
     title TEXT NOT NULL,
     options TEXT NOT NULL,
     write_secret_hash TEXT NOT NULL,
+    write_secret_plaintext TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     closed_at TEXT,
     auto_close_at TEXT,
@@ -88,6 +89,12 @@ try {
 // Migration: Add voting_secret_hash column if it doesn't exist
 try {
   db.exec(`ALTER TABLE votes ADD COLUMN voting_secret_hash TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+try {
+  db.exec(`ALTER TABLE votes ADD COLUMN write_secret_plaintext TEXT`)
 } catch (e) {
   // Column already exists, ignore error
 }
@@ -186,6 +193,7 @@ export interface Vote {
   title: string
   options: string[]
   write_secret_hash: string
+  write_secret_plaintext: string | null
   voting_secret_hash: string | null
   voting_secret_plaintext: string | null
   created_at: string
@@ -232,6 +240,7 @@ export interface LiveVoteSummary {
   id: string
   title: string
   options: string[]
+  write_secret_plaintext: string | null
   created_at: string
   closed_at: string | null
   auto_close_at: string | null
@@ -266,6 +275,7 @@ export function createVote(
   title: string,
   options: string[],
   writeSecretHash: string,
+  writeSecretPlaintext: string | null = null,
   voterNamesRequired: boolean = true,
   autoCloseAt: string | null = null,
   votingSecretHash: string | null = null,
@@ -292,10 +302,10 @@ export function createVote(
   const stmt = db.prepare(`
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
-      auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
+      write_secret_plaintext, auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
       recurrence_start_at, recurrence_group_id, recurrence_id_format, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     id,
@@ -303,6 +313,7 @@ export function createVote(
     JSON.stringify(options),
     writeSecretHash,
     voterNamesRequired ? 1 : 0,
+    writeSecretPlaintext,
     autoCloseAt,
     null,
     null,
@@ -385,6 +396,7 @@ export function getLiveVotesPaginated(limit: number, offset: number): { votes: L
       id,
       title,
       options,
+      write_secret_plaintext,
       created_at,
       closed_at,
       auto_close_at,
@@ -656,10 +668,10 @@ export function createNextRecurringVote(
   const stmt = db.prepare(`
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
-      auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
+      write_secret_plaintext, auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
       recurrence_start_at, recurrence_group_id, recurrence_id_format, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     newId,
@@ -667,6 +679,7 @@ export function createNextRecurringVote(
     JSON.stringify(baseVote.options),
     baseVote.write_secret_hash,
     baseVote.voter_names_required ? 1 : 0,
+    baseVote.write_secret_plaintext,
     autoCloseAt,
     null,
     null,

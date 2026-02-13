@@ -83,6 +83,7 @@ npm test
 7. Optionally manage Discord integrations on the System Admin page (`/system`):
    - Validate `ADMIN_SECRET` to access integration controls
    - Create integrations and copy the integration ID
+   - Review live votes, copy vote admin secrets (when available), and trigger tie-breaker runoff
 8. Optionally attach Discord notifications (under advanced options → Notifications tab):
    - Enter a Discord integration ID (from System Admin)
    - Provide the admin API secret to attach notifications
@@ -283,8 +284,11 @@ See `.github/workflows/ci.yml` for full configuration details.
 - **Share Message**: Easy-to-copy formatted message with voting link (includes secret) and results link
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Admin Panel**: Full vote management (delete, close/reopen, edit options, set auto-close, rename contest ID)
+- **Manual Tie-Breaker Trigger**: Vote admins and system admins can force tie-breaker runoff creation (the source vote closes first)
+- **System Admin Secret Recovery**: System admin live-vote cards show a copyable vote admin secret when available
 - **REST API**: Full programmatic access for automated vote creation (see [docs/API.md](docs/API.md))
 - **Vote IDs**: Support dashes for readable URLs plus recurring ID format tokens (e.g., `/v/friday-lunch-02-13-2026`)
+- **Runoff Vote IDs**: Tie-breaker runoff IDs use a readable `-runoff-1` suffix
 
 ### Key Files
 
@@ -396,4 +400,3 @@ If you are using Claude Code or another AI coding agent, start there.
 ## License
 
 MIT License. See `LICENSE`.
-

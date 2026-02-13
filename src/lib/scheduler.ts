@@ -25,11 +25,11 @@ import {
   getVotesNeedingClosedNotification,
   closeVote,
   Vote,
+  getVote,
   getVotesNeedingTieRunoff,
   setTieRunoffCreated,
   createVote,
   voteExists,
-  getVote,
 } from './db'
 import { notifyVoteOpened, notifyVoteClosed, notifyRunoffRequired } from './notifications'
 import { countIRV } from './irv'
@@ -193,15 +193,19 @@ async function processOpenNotifications(): Promise<void> {
  * Generate a unique vote ID for a tie runoff vote while respecting 32-char limit.
  */
 function generateTieRunoffVoteId(sourceVoteId: string): string {
-  const suffix = `r2-${Date.now().toString(36)}`
-  const maxPrefixLength = Math.max(3, 32 - suffix.length - 1)
-  const prefix = sourceVoteId.slice(0, maxPrefixLength).replace(/-+$/g, '') || 'runoff'
-  let candidate = `${prefix}-${suffix}`
+  const runNumber = 1
+  const runoffSuffix = `-runoff-${runNumber}`
+  const maxBaseLength = Math.max(3, 32 - runoffSuffix.length)
+  const basePrefix = sourceVoteId.slice(0, maxBaseLength).replace(/-+$/g, '') || 'runoff'
+  let candidate = `${basePrefix}${runoffSuffix}`
 
+  let collisionIndex = 2
   while (voteExists(candidate)) {
-    const nextSuffix = `r2-${Date.now().toString(36)}${Math.floor(Math.random() * 9)}`
-    const nextPrefix = sourceVoteId.slice(0, Math.max(3, 32 - nextSuffix.length - 1)).replace(/-+$/g, '') || 'runoff'
-    candidate = `${nextPrefix}-${nextSuffix}`
+    const numberedSuffix = `-runoff-${runNumber}-${collisionIndex}`
+    const numberedBaseLength = Math.max(3, 32 - numberedSuffix.length)
+    const numberedBasePrefix = sourceVoteId.slice(0, numberedBaseLength).replace(/-+$/g, '') || 'runoff'
+    candidate = `${numberedBasePrefix}${numberedSuffix}`
+    collisionIndex += 1
   }
 
   return candidate
@@ -227,48 +231,35 @@ function calculateRunoffAutoCloseAt(vote: Vote): string | null {
 /**
  * Create and notify a second-round runoff when a pure tie is detected.
  */
-async function processTieRunoffVotes(): Promise<void> {
-  const closedVotes = getVotesNeedingTieRunoff()
-
-  for (const vote of closedVotes) {
-    if (!vote.integration_id) {
-      continue
-    }
-
-    try {
-      await triggerTieRunoffVote(vote.id, true)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown tie runoff error'
-      if (message === 'At least one ballot is required to trigger a tie breaker' || message === 'Current results are not a tie') {
-        setTieRunoffCreated(vote.id, '', new Date().toISOString())
-        continue
-      }
-      console.error(`[Scheduler] Error creating tie runoff for ${vote.id}:`, error)
-    }
-  }
-}
-
-export async function triggerTieRunoffVote(voteId: string, requireIntegration: boolean = false): Promise<Vote> {
+export async function triggerTieRunoffForVote(
+  voteId: string,
+  options: { closeIfOpen?: boolean; suppressClosedNotification?: boolean } = {}
+): Promise<{ success: boolean; runoffVoteId?: string; message?: string }> {
   const vote = getVote(voteId)
   if (!vote) {
-    throw new Error('Vote not found')
+    return { success: false, message: 'Vote not found' }
+  }
+
+  if (vote.tie_runoff_created_at) {
+    return { success: false, message: 'Tie runoff already created for this vote' }
+  }
+
+  if (options.suppressClosedNotification && vote.integration_id) {
+    setVoteClosedNotifiedAt(vote.id, new Date().toISOString())
   }
 
   if (!vote.closed_at) {
-    throw new Error('Vote must be closed before triggering a tie breaker')
-  }
+    if (!options.closeIfOpen) {
+      return { success: false, message: 'Vote must be closed before creating a runoff' }
+    }
 
-  if (vote.tie_runoff_vote_id) {
-    throw new Error(`Tie breaker already created: ${vote.tie_runoff_vote_id}`)
-  }
-
-  if (requireIntegration && !vote.integration_id) {
-    throw new Error('Integration is required to auto-create tie breaker votes')
+    closeVote(vote.id)
   }
 
   const ballots = getBallotsByVoteId(vote.id)
   if (ballots.length === 0) {
-    throw new Error('At least one ballot is required to trigger a tie breaker')
+    setTieRunoffCreated(vote.id, '', new Date().toISOString())
+    return { success: false, message: 'No ballots were submitted, so no runoff was created' }
   }
 
   const result = countIRV(
@@ -277,7 +268,8 @@ export async function triggerTieRunoffVote(voteId: string, requireIntegration: b
   )
 
   if (!result.isTie || result.tiedOptions.length < 2) {
-    throw new Error('Current results are not a tie')
+    setTieRunoffCreated(vote.id, '', new Date().toISOString())
+    return { success: false, message: 'Current ballots do not produce a pure tie' }
   }
 
   const runoffVoteId = generateTieRunoffVoteId(vote.id)
@@ -286,6 +278,7 @@ export async function triggerTieRunoffVote(voteId: string, requireIntegration: b
     `${vote.title} (Runoff)`,
     result.tiedOptions,
     vote.write_secret_hash,
+    vote.write_secret_plaintext,
     vote.voter_names_required,
     calculateRunoffAutoCloseAt(vote),
     vote.voting_secret_hash,
@@ -307,7 +300,7 @@ export async function triggerTieRunoffVote(voteId: string, requireIntegration: b
       ? `${runoffPath}?secret=${encodeURIComponent(runoffVote.voting_secret_plaintext)}`
       : runoffPath
 
-    await notifyRunoffRequired(vote.integration_id, {
+    const sent = await notifyRunoffRequired(vote.integration_id, {
       title: vote.title,
       tiedOptions: result.tiedOptions,
       voteUrl: runoffVoteUrl,
@@ -315,10 +308,25 @@ export async function triggerTieRunoffVote(voteId: string, requireIntegration: b
       sourceResultsUrl: `${baseUrl}${withBasePath(`/v/${vote.id}/results`)}`,
       autoCloseAt: runoffVote.auto_close_at,
     })
+
+    if (sent) {
+      console.log(`[Scheduler] Created tie runoff vote ${runoffVote.id} from ${vote.id}`)
+    }
   }
 
   setTieRunoffCreated(vote.id, runoffVote.id, new Date().toISOString())
-  return runoffVote
+  return { success: true, runoffVoteId: runoffVote.id }
+}
+
+async function processTieRunoffVotes(): Promise<void> {
+  const closedVotes = getVotesNeedingTieRunoff()
+
+  for (const vote of closedVotes) {
+    if (!vote.integration_id) {
+      continue
+    }
+    await triggerTieRunoffForVote(vote.id)
+  }
 }
 
 /**

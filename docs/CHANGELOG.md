@@ -11,6 +11,8 @@ This document tracks work history, including what was implemented by AI agents a
 ### Added
 - **Manual Tie Breaker Triggering** - Vote admins and system admins can now manually create a runoff vote for closed tied contests.
 - **System Admin Vote Access** - System admin vote cards now include a direct link to each vote's admin panel.
+- **Manual Tie-Breaker Runoff Trigger** - Vote admins and system admins can now trigger tie-breaker runoff creation while voting is still open; the vote is closed first and runoff creation is attempted immediately.
+- **System Admin Vote Secret Visibility** - Live vote cards in `/system` now include a copyable vote admin secret field for votes created after secret retention was added.
 - **Recurring Contest ID Format + Rename** - Recurring votes can now generate readable date-based IDs (default `{title}-{close-mm-dd-yyyy}`), and admins can rename contest IDs from the admin panel/API.
 - **Contest ID Visibility** - Vote and results pages now show the contest ID under the title so closed or shared contests are easier to identify.
 - **Mobile Drag Handle UX** - Ranking rows now use a dedicated ☰ drag handle to reduce accidental reordering while scrolling on touch devices.
@@ -18,6 +20,7 @@ This document tracks work history, including what was implemented by AI agents a
 
 ### Changed
 - **System Admin Vote Controls** - `/system` now lists both open and closed votes, supports close/reopen actions, and preserves existing ballots when reopening.
+- **Runoff Contest ID Format** - Automatic and manual tie-runoff votes now use IDs ending in `-runoff-1` (with numeric collision suffixes if needed).
 - **IRV Tie-Breaking** - Elimination ties now use weighted ranking support before first-round totals and lexicographic fallback.
 
 ### Fixed
@@ -366,5 +369,4 @@ This project uses semantic versioning:
 - **Human**: David (project owner, planning, decisions)
 - **AI Agent**: Initial MVP implementation (Phases 1-3)
 - **AI Agent**: Repository cleanup and CI/CD setup (current)
-
 

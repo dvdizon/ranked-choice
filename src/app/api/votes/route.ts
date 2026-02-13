@@ -262,6 +262,7 @@ export async function POST(request: NextRequest) {
       title.trim(),
       cleanOptions,
       adminSecretHash,
+      adminSecret,
       voterNamesRequired !== false, // Default to true if not specified
       validAutoCloseAt,
       votingSecretHash,

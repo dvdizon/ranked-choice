@@ -169,14 +169,11 @@ export default function AdminPage() {
     }
   }
 
-
   const handleTriggerTieBreaker = async () => {
-    if (!vote?.closed_at) {
-      setError('Close voting before triggering a tie breaker.')
-      return
-    }
-
-    if (!confirm('Trigger a tie breaker runoff vote from the current tied results?')) {
+    const confirmed = window.confirm(
+      'Trigger tie-breaker runoff now? This closes the current vote and attempts to create a runoff from tied ballots.'
+    )
+    if (!confirmed) {
       return
     }
 
@@ -192,12 +189,12 @@ export default function AdminPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Failed to trigger tie breaker')
+        setError(data.error || 'Failed to trigger tie-breaker runoff')
         setLoading(false)
         return
       }
 
-      alert(`Tie breaker vote created: ${data.runoffVoteId}`)
+      setVote(data.vote)
     } catch (err) {
       setError('Network error')
     } finally {
@@ -445,23 +442,14 @@ export default function AdminPage() {
           </button>
           <button
             className="btn-secondary"
-            onClick={handleTriggerTieBreaker}
-            disabled={loading || !vote.closed_at}
-          >
-            Trigger Tie Breaker
-          </button>
-          <button
-            className="btn-secondary"
             onClick={() => router.push(`/v/${activeVoteId}/results`)}
           >
             View Results
           </button>
+          <button className="btn-secondary" onClick={handleTriggerTieBreaker} disabled={loading}>
+            Trigger Tie-Breaker
+          </button>
         </div>
-        {!vote.closed_at && (
-          <p className="muted" style={{ marginTop: '0.5rem' }}>
-            Close voting before triggering a tie breaker runoff vote.
-          </p>
-        )}
       </div>
 
       <div className="card" style={{ marginBottom: '1.5rem' }}>
