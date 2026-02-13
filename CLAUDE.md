@@ -262,6 +262,7 @@ location /health {
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Contest Identification**: Vote and results pages display both contest title and vote ID
 - **Automatic Tie Runoff**: Pure ties can trigger an automatic second-round runoff vote (tied options only) with integration notification
+- **Manual Tie Breakers**: Vote admins and system admins can manually trigger a tie-breaker runoff for closed tied votes
 
 ### Admin Capabilities
 - **Separate Secrets**: Admin secret (for management) vs Voting secret (for ballot submission)
@@ -270,10 +271,11 @@ location /health {
   - View all ballots with voter names and timestamps
   - Delete individual ballots or entire vote
   - Close/reopen voting (prevents new submissions when closed)
+  - Trigger tie-breaker runoff for closed tied votes
   - Set or change auto-close date/time
   - Edit vote options (removes deleted options from existing ballots)
 - **System Admin** (`/system`): ADMIN_SECRET protected management
-  - Monitor live votes, close/delete them, and re-create votes with prefilled fields
+  - Monitor open/closed votes, close/reopen/delete them, trigger tie-breaker runoffs, open vote admin pages, and re-create votes with prefilled fields
   - Manage integrations (Discord, Slack, webhook)
 - **API Key Management** (`/api/admin/api-keys`): Admin-secret protected endpoints
   - Create API keys for programmatic access

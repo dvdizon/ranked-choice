@@ -26,7 +26,7 @@ It uses **Instant-Runoff Voting (IRV)**:
 - Lowest option is eliminated each round
 - Ties for elimination use weighted ranking support, then first-round totals, then option ID
 - Ballots are redistributed until a winner (or tie) is reached
-- Pure ties can automatically trigger a second-round runoff (for integration-enabled votes)
+- Pure ties can automatically trigger a second-round runoff (for integration-enabled votes), and admins can also trigger runoff tie breakers manually for closed tied contests
 
 ---
 
@@ -121,6 +121,7 @@ You'll receive three URLs:
 1. Go to `/v/<vote-id>/results`
 2. See the winner (or tie), with contest title and ID shown at the top for clarity
 3. If a pure tie is detected on an integration-enabled vote, a runoff vote is automatically created with only the tied options and announced to the same integration channel
+4. Vote admins can manually trigger a tie-breaker runoff from the admin panel after closing voting
 4. View round-by-round elimination details
 5. See all submitted ballots with voter names (or "Anonymous" if name not provided)
 
@@ -141,9 +142,10 @@ You'll receive three URLs:
 
 1. Go to `/system`
 2. Enter the `ADMIN_SECRET`
-3. Manage live votes:
-   - Review a paginated list of open votes
-   - Close voting, delete votes, or re-create votes with pre-filled fields
+3. Manage votes:
+   - Review a paginated list of open and closed votes
+   - Close/reopen voting, trigger tie-breaker runoffs, delete votes, or re-create votes with pre-filled fields
+   - Open any vote's admin panel directly from the system admin vote list
 4. Manage integrations:
    - Create a new Discord integration (webhook URL required)
    - Load and delete existing integrations

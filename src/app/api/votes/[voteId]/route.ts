@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getVote, countBallots, deleteVote, closeVote, reopenVote, updateVoteOptions, setAutoCloseAt } from '@/lib/db'
 import { canonicalizeVoteId, verifySecret } from '@/lib/auth'
 import { withBasePath } from '@/lib/paths'
+import { triggerTieRunoffVote } from '@/lib/scheduler'
 
 export async function GET(
   request: NextRequest,
@@ -165,6 +166,17 @@ export async function PATCH(
         validAutoCloseAt = autoCloseDate.toISOString()
       }
       setAutoCloseAt(voteId, validAutoCloseAt)
+    } else if (action === 'triggerTieBreaker') {
+      try {
+        const runoffVote = await triggerTieRunoffVote(voteId)
+        return NextResponse.json({
+          success: true,
+          runoffVoteId: runoffVote.id,
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to trigger tie breaker'
+        return NextResponse.json({ error: message }, { status: 400 })
+      }
     } else {
       return NextResponse.json(
         { error: 'Invalid action' },

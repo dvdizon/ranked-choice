@@ -266,7 +266,18 @@ Perform admin actions on a vote (requires write secret).
 }
 ```
 
-**Response:**
+**Trigger Tie Breaker Runoff:**
+
+```json
+{
+  "writeSecret": "xYz123AbC",
+  "action": "triggerTieBreaker"
+}
+```
+
+Returns `runoffVoteId` when a runoff is created. The source vote must be closed and currently tied.
+
+**Response (close/reopen/update options/set auto-close):**
 
 ```json
 {
@@ -281,6 +292,15 @@ Perform admin actions on a vote (requires write secret).
     "voter_names_required": true,
     "ballotCount": 5
   }
+}
+```
+
+**Response (trigger tie breaker):**
+
+```json
+{
+  "success": true,
+  "runoffVoteId": "team-lunch-2026-runoff"
 }
 ```
 
@@ -465,11 +485,11 @@ Authorization: Bearer <ADMIN_SECRET>
 
 ---
 
-### List Live Votes
+### List Votes
 
 **GET** `/api/admin/votes`
 
-List active (open) votes, paginated.
+List votes (open or closed), paginated.
 
 **Headers:**
 
@@ -497,6 +517,7 @@ Authorization: Bearer <ADMIN_SECRET>
       "title": "Friday Lunch",
       "options": ["Pizza", "Sushi", "Tacos"],
       "created_at": "2026-02-01T12:00:00Z",
+      "closed_at": null,
       "auto_close_at": "2026-02-02T12:00:00Z",
       "voter_names_required": true,
       "period_days": null,
@@ -512,11 +533,11 @@ Authorization: Bearer <ADMIN_SECRET>
 
 ---
 
-### Close Live Vote
+### Update Vote (System Admin)
 
 **PATCH** `/api/admin/votes/:voteId`
 
-Close a live vote (admin secret required).
+Close, reopen, or trigger a tie-breaker runoff vote (admin secret required).
 
 **Headers:**
 
@@ -532,6 +553,9 @@ Authorization: Bearer <ADMIN_SECRET>
 }
 ```
 
+Use `"reopen"` to reopen a closed vote without deleting existing ballots.
+Use `"triggerTieBreaker"` to create a runoff for a closed tied vote.
+
 **Response:**
 
 ```json
@@ -540,9 +564,18 @@ Authorization: Bearer <ADMIN_SECRET>
 }
 ```
 
+When `action` is `"triggerTieBreaker"`, response also includes:
+
+```json
+{
+  "success": true,
+  "runoffVoteId": "team-lunch-2026-runoff"
+}
+```
+
 ---
 
-### Delete Live Vote
+### Delete Vote (System Admin)
 
 **DELETE** `/api/admin/votes/:voteId`
 

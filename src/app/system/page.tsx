@@ -15,6 +15,7 @@ interface LiveVoteSummary {
   title: string
   options: string[]
   created_at: string
+  closed_at: string | null
   auto_close_at: string | null
   voter_names_required: boolean
   period_days: number | null
@@ -341,13 +342,20 @@ export default function SystemAdminPage() {
     }
   }
 
-  const closeLiveVote = async (voteId: string) => {
+
+  const updateLiveVote = async (voteId: string, action: 'close' | 'reopen' | 'triggerTieBreaker') => {
     if (!adminSecretValidated) {
       setLiveVotesError('Admin secret validation is required.')
       return
     }
 
-    const confirmed = window.confirm('Close this vote? Voting will immediately stop.')
+    const messages = {
+      close: 'Close this vote? Voting will immediately stop.',
+      reopen: 'Reopen this vote? Existing ballots will remain intact.',
+      triggerTieBreaker: 'Trigger a tie breaker runoff vote for this vote?'
+    } as const
+
+    const confirmed = window.confirm(messages[action])
     if (!confirmed) {
       return
     }
@@ -362,18 +370,18 @@ export default function SystemAdminPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${integrationAdminSecret.trim()}`,
         },
-        body: JSON.stringify({ action: 'close' }),
+        body: JSON.stringify({ action }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setLiveVotesError(data.error || 'Failed to close vote')
+        setLiveVotesError(data.error || `Failed to ${action} vote`)
         setLiveVotesLoading(false)
         return
       }
 
       await loadLiveVotes(liveVotesPage)
     } catch (err) {
-      setLiveVotesError('Network error while closing vote.')
+      setLiveVotesError(`Network error while attempting to ${action} vote.`)
     } finally {
       setLiveVotesLoading(false)
     }
@@ -491,9 +499,9 @@ export default function SystemAdminPage() {
       {adminSecretValidated && (
         <>
           <div className="card" style={{ marginBottom: '1.5rem' }}>
-            <h2>Live Votes</h2>
+            <h2>Votes</h2>
             <p className="muted" style={{ marginBottom: '0.75rem' }}>
-              Monitor active votes and take action without individual admin secrets.
+              Monitor and manage open or closed votes without individual admin secrets.
             </p>
 
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
@@ -503,17 +511,17 @@ export default function SystemAdminPage() {
                 onClick={() => loadLiveVotes(1)}
                 disabled={liveVotesLoading}
               >
-                {liveVotesLoading ? 'Loading...' : 'Refresh live votes'}
+                {liveVotesLoading ? 'Loading...' : 'Refresh votes'}
               </button>
               <p className="muted" style={{ margin: 0 }}>
-                Showing {liveVotes.length} of {liveVotesTotal} live vote{liveVotesTotal === 1 ? '' : 's'}.
+                Showing {liveVotes.length} of {liveVotesTotal} vote{liveVotesTotal === 1 ? '' : 's'}.
               </p>
             </div>
 
             {liveVotesError && <p className="error" style={{ marginBottom: '0.75rem' }}>{liveVotesError}</p>}
 
             {liveVotes.length === 0 && !liveVotesError && (
-              <p className="muted">No live votes found.</p>
+              <p className="muted">No votes found.</p>
             )}
 
             {liveVotes.length > 0 && (
@@ -528,6 +536,10 @@ export default function SystemAdminPage() {
                         </p>
                         <p className="muted" style={{ margin: '0.25rem 0 0' }}>
                           Created: {new Date(vote.created_at).toLocaleString()}
+                        </p>
+                        <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                          Status: <strong>{vote.closed_at ? 'Closed' : 'Open'}</strong>
+                          {vote.closed_at && ` (closed ${new Date(vote.closed_at).toLocaleString()})`}
                         </p>
                         {vote.auto_close_at && (
                           <p className="muted" style={{ margin: '0.25rem 0 0' }}>
@@ -549,11 +561,22 @@ export default function SystemAdminPage() {
                         <button
                           type="button"
                           className="btn-secondary"
-                          onClick={() => closeLiveVote(vote.id)}
+                          onClick={() => updateLiveVote(vote.id, vote.closed_at ? 'reopen' : 'close')}
                           disabled={liveVotesLoading}
                         >
-                          Close vote
+                          {vote.closed_at ? 'Reopen vote' : 'Close vote'}
                         </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => updateLiveVote(vote.id, 'triggerTieBreaker')}
+                          disabled={liveVotesLoading || !vote.closed_at}
+                        >
+                          Trigger tie breaker
+                        </button>
+                        <Link className="btn-secondary" href={`/v/${vote.id}/admin`}>
+                          Open vote admin
+                        </Link>
                         <Link className="btn-secondary" href={getVoteRecreateHref(vote)}>
                           Re-create vote
                         </Link>
