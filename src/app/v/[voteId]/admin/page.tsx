@@ -24,7 +24,7 @@ interface Ballot {
 export default function AdminPage() {
   const params = useParams()
   const router = useRouter()
-  const voteId = params.voteId as string
+  const routeVoteId = params.voteId as string
 
   const [authenticated, setAuthenticated] = useState(false)
   const [writeSecret, setWriteSecret] = useState('')
@@ -36,6 +36,10 @@ export default function AdminPage() {
   const [optionsText, setOptionsText] = useState('')
   const [editingAutoClose, setEditingAutoClose] = useState(false)
   const [autoCloseAt, setAutoCloseAt] = useState('')
+  const [editingVoteId, setEditingVoteId] = useState(false)
+  const [nextVoteId, setNextVoteId] = useState('')
+
+  const activeVoteId = vote?.id ?? routeVoteId
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,7 +48,7 @@ export default function AdminPage() {
 
     try {
       // Fetch vote data to verify
-      const res = await fetch(withBasePath(`/api/votes/${voteId}`))
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`))
       if (!res.ok) {
         setError('Vote not found')
         setLoading(false)
@@ -52,9 +56,10 @@ export default function AdminPage() {
       }
       const voteData = await res.json()
       setVote(voteData)
+      setNextVoteId(voteData.id)
 
       // Fetch ballots to verify secret
-      const ballotsRes = await fetch(withBasePath(`/api/votes/${voteId}/ballots`), {
+      const ballotsRes = await fetch(withBasePath(`/api/votes/${activeVoteId}/ballots`), {
         headers: {
           'X-Write-Secret': writeSecret,
         },
@@ -85,7 +90,7 @@ export default function AdminPage() {
     setError('')
 
     try {
-      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret }),
@@ -112,7 +117,7 @@ export default function AdminPage() {
     }
 
     try {
-      const res = await fetch(withBasePath(`/api/votes/${voteId}/ballots/${ballotId}`), {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}/ballots/${ballotId}`), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret }),
@@ -142,7 +147,7 @@ export default function AdminPage() {
     setError('')
 
     try {
-      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret, action }),
@@ -179,7 +184,7 @@ export default function AdminPage() {
     setError('')
 
     try {
-      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret, action: 'triggerTieBreaker' }),
@@ -217,7 +222,7 @@ export default function AdminPage() {
     setLoading(true)
 
     try {
-      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ writeSecret, action: 'updateOptions', options }),
@@ -235,7 +240,7 @@ export default function AdminPage() {
       setEditingOptions(false)
 
       // Reload ballots to see updated rankings
-      const ballotsRes = await fetch(withBasePath(`/api/votes/${voteId}/ballots`), {
+      const ballotsRes = await fetch(withBasePath(`/api/votes/${activeVoteId}/ballots`), {
         headers: {
           'X-Write-Secret': writeSecret,
         },
@@ -275,7 +280,7 @@ export default function AdminPage() {
     setLoading(true)
 
     try {
-      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -295,6 +300,43 @@ export default function AdminPage() {
       const data = await res.json()
       setVote(data.vote)
       setEditingAutoClose(false)
+    } catch (err) {
+      setError('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRenameVoteId = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (!nextVoteId.trim()) {
+      setError('Contest ID is required')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ writeSecret, action: 'renameVoteId', newVoteId: nextVoteId.trim() }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to rename contest ID')
+        setLoading(false)
+        return
+      }
+
+      setVote(data.vote)
+      setNextVoteId(data.vote.id)
+      setEditingVoteId(false)
+      if (data.vote.id !== routeVoteId) {
+        router.replace(`/v/${data.vote.id}/admin`)
+      }
     } catch (err) {
       setError('Network error')
     } finally {
@@ -349,7 +391,7 @@ export default function AdminPage() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => router.push(`/v/${voteId}`)}
+              onClick={() => router.push(`/v/${activeVoteId}`)}
             >
               Back to Vote
             </button>
@@ -410,7 +452,7 @@ export default function AdminPage() {
           </button>
           <button
             className="btn-secondary"
-            onClick={() => router.push(`/v/${voteId}/results`)}
+            onClick={() => router.push(`/v/${activeVoteId}/results`)}
           >
             View Results
           </button>
@@ -419,6 +461,46 @@ export default function AdminPage() {
           <p className="muted" style={{ marginTop: '0.5rem' }}>
             Close voting before triggering a tie breaker runoff vote.
           </p>
+        )}
+      </div>
+
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h2>Contest ID</h2>
+        {!editingVoteId ? (
+          <>
+            <p style={{ marginBottom: '1rem' }}>
+              Current contest ID: <strong>{vote.id}</strong>
+            </p>
+            <button onClick={() => { setNextVoteId(vote.id); setEditingVoteId(true) }} disabled={loading}>
+              Rename Contest ID
+            </button>
+            <p className="muted" style={{ marginTop: '0.5rem' }}>
+              Renaming updates vote, results, and admin URLs immediately.
+            </p>
+          </>
+        ) : (
+          <form onSubmit={handleRenameVoteId}>
+            <div className="form-group">
+              <label htmlFor="nextVoteId">New contest ID</label>
+              <input
+                type="text"
+                id="nextVoteId"
+                value={nextVoteId}
+                onChange={(e) => setNextVoteId(e.target.value)}
+                placeholder="friday-lunch-02-13-2026"
+                required
+              />
+              <p className="muted">Use 3-32 lowercase letters, numbers, or dashes.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button type="submit" disabled={loading}>
+                {loading ? 'Renaming...' : 'Save Contest ID'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setEditingVoteId(false)}>
+                Cancel
+              </button>
+            </div>
+          </form>
         )}
       </div>
 

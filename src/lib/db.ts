@@ -130,6 +130,12 @@ try {
 }
 
 try {
+  db.exec(`ALTER TABLE votes ADD COLUMN recurrence_id_format TEXT`)
+} catch (e) {
+  // Column already exists, ignore error
+}
+
+try {
   db.exec(`ALTER TABLE votes ADD COLUMN voting_secret_plaintext TEXT`)
 } catch (e) {
   // Column already exists, ignore error
@@ -194,6 +200,7 @@ export interface Vote {
   vote_duration_hours: number | null
   recurrence_start_at: string | null
   recurrence_group_id: string | null
+  recurrence_id_format: string | null
   integration_id: number | null
   recurrence_active: boolean
 }
@@ -267,6 +274,7 @@ export function createVote(
     voteDurationHours?: number | null
     recurrenceStartAt?: string | null
     recurrenceGroupId?: string | null
+    recurrenceIdFormat?: string | null
     integrationId?: number | null
     recurrenceActive?: boolean
     votingSecretPlaintext?: string | null
@@ -277,6 +285,7 @@ export function createVote(
   const recurrenceStartAt = recurrence?.recurrenceStartAt ?? null
   const recurrenceGroupId = recurrence?.recurrenceGroupId ?? null
   const integrationId = recurrence?.integrationId ?? null
+  const recurrenceIdFormat = recurrence?.recurrenceIdFormat ?? null
   const recurrenceActive = recurrence?.recurrenceActive ? 1 : 0
   const votingSecretPlaintext = recurrence?.votingSecretPlaintext ?? null
 
@@ -284,9 +293,9 @@ export function createVote(
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
       auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
-      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
+      recurrence_start_at, recurrence_group_id, recurrence_id_format, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     id,
@@ -303,6 +312,7 @@ export function createVote(
     voteDurationHours,
     recurrenceStartAt,
     recurrenceGroupId,
+    recurrenceIdFormat,
     integrationId,
     recurrenceActive,
     null,
@@ -339,6 +349,21 @@ export function getVote(id: string): Vote | null {
 export function voteExists(id: string): boolean {
   const stmt = db.prepare('SELECT 1 FROM votes WHERE id = ?')
   return stmt.get(id) !== undefined
+}
+
+export function updateVoteId(currentId: string, nextId: string): Vote {
+  const transaction = db.transaction(() => {
+    const updateVoteStmt = db.prepare('UPDATE votes SET id = ? WHERE id = ?')
+    const updateBallotsStmt = db.prepare('UPDATE ballots SET vote_id = ? WHERE vote_id = ?')
+    const updateGroupStmt = db.prepare('UPDATE votes SET recurrence_group_id = ? WHERE recurrence_group_id = ?')
+
+    updateVoteStmt.run(nextId, currentId)
+    updateBallotsStmt.run(nextId, currentId)
+    updateGroupStmt.run(nextId, currentId)
+  })
+
+  transaction()
+  return getVote(nextId)!
 }
 
 export function closeExpiredVotes(): number {
@@ -632,9 +657,9 @@ export function createNextRecurringVote(
     INSERT INTO votes (
       id, title, options, write_secret_hash, voter_names_required,
       auto_close_at, open_notified_at, closed_notified_at, voting_secret_hash, voting_secret_plaintext, period_days, vote_duration_hours,
-      recurrence_start_at, recurrence_group_id, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
+      recurrence_start_at, recurrence_group_id, recurrence_id_format, integration_id, recurrence_active, tie_runoff_created_at, tie_runoff_vote_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     newId,
@@ -651,6 +676,7 @@ export function createNextRecurringVote(
     baseVote.vote_duration_hours,
     recurrenceStartAt,
     baseVote.recurrence_group_id,
+    baseVote.recurrence_id_format,
     baseVote.integration_id,
     1, // Keep recurrence active
     null,

@@ -78,6 +78,7 @@ npm test
    - Start date/time (when voting opens)
    - Enable recurring votes (min 7-day period)
    - Set vote duration (hours) for each recurring instance
+   - Set recurring contest ID format (default `{title}-{close-mm-dd-yyyy}`)
    - Notifications send when the vote opens and when it closes
 7. Optionally manage Discord integrations on the System Admin page (`/system`):
    - Validate `ADMIN_SECRET` to access integration controls
@@ -281,9 +282,9 @@ See `.github/workflows/ci.yml` for full configuration details.
   - Voting secret for ballot submission (can be shared widely)
 - **Share Message**: Easy-to-copy formatted message with voting link (includes secret) and results link
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
-- **Admin Panel**: Full vote management (delete, close/reopen, edit options, set auto-close)
+- **Admin Panel**: Full vote management (delete, close/reopen, edit options, set auto-close, rename contest ID)
 - **REST API**: Full programmatic access for automated vote creation (see [docs/API.md](docs/API.md))
-- **Vote IDs**: Support dashes for readable URLs (e.g., `/v/team-lunch`)
+- **Vote IDs**: Support dashes for readable URLs plus recurring ID format tokens (e.g., `/v/friday-lunch-02-13-2026`)
 
 ### Key Files
 

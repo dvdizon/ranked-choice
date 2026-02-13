@@ -261,6 +261,7 @@ location /health {
 - **Persistent Options**: Vote creator's last-used options saved in localStorage
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Contest Identification**: Vote and results pages display both contest title and vote ID
+- **Recurring Contest IDs**: Recurring votes can use format tokens (default `{title}-{close-mm-dd-yyyy}`), and admins can rename contest IDs
 - **Automatic Tie Runoff**: Pure ties can trigger an automatic second-round runoff vote (tied options only) with integration notification
 - **Manual Tie Breakers**: Vote admins and system admins can manually trigger a tie-breaker runoff for closed tied votes
 
@@ -286,6 +287,7 @@ location /health {
 ### Vote ID Format
 - Alphanumeric characters and dashes allowed (e.g., `friday-lunch`)
 - 3-32 characters, case-insensitive (normalized to lowercase)
+- Recurring ID format tokens: `{title}`, `{close-mm-dd-yyyy}`, `{close-yyyy-mm-dd}`, `{start-mm-dd-yyyy}`, `{start-yyyy-mm-dd}`
 
 ## RCV Rules (Authoritative)
 

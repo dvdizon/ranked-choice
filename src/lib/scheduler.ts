@@ -34,6 +34,7 @@ import {
 import { notifyVoteOpened, notifyVoteClosed, notifyRunoffRequired } from './notifications'
 import { countIRV } from './irv'
 import { getBaseUrl, withBasePath } from './paths'
+import { buildContestIdFromFormat, createUniqueVoteId } from './contest-id'
 
 // Protection limits (configurable via environment variables)
 const MAX_RECURRING_VOTES_PER_TICK = parseInt(process.env.MAX_RECURRING_VOTES_PER_TICK || '10', 10)
@@ -65,9 +66,20 @@ function calculateNextStartAt(closedVote: Vote): Date {
 /**
  * Generate a unique vote ID for a recurring vote instance
  */
-function generateRecurringVoteId(recurrenceGroupId: string): string {
-  const timestamp = Date.now().toString(36)
-  return `${recurrenceGroupId}-${timestamp}`
+function generateRecurringVoteId(vote: Vote, nextStartAt: Date, nextCloseAt: Date): string {
+  if (!vote.recurrence_id_format) {
+    const timestamp = Date.now().toString(36)
+    return createUniqueVoteId(`${vote.recurrence_group_id}-${timestamp}`, voteExists)
+  }
+
+  const baseId = buildContestIdFromFormat({
+    title: vote.title,
+    closeAt: nextCloseAt,
+    startAt: nextStartAt,
+    format: vote.recurrence_id_format,
+  })
+
+  return createUniqueVoteId(baseId, voteExists)
 }
 
 /**
@@ -316,10 +328,9 @@ async function processClosedRecurringVote(closedVote: Vote): Promise<void> {
   console.log(`[Scheduler] Processing closed recurring vote: ${closedVote.id}`)
 
   try {
-    // Create the next vote instance
-    const newVoteId = generateRecurringVoteId(closedVote.recurrence_group_id!)
     const nextStartAt = calculateNextStartAt(closedVote)
     const autoCloseAt = calculateNextAutoCloseAt(nextStartAt, closedVote)
+    const newVoteId = generateRecurringVoteId(closedVote, nextStartAt, new Date(autoCloseAt))
 
     const newVote = createNextRecurringVote(
       closedVote,
@@ -458,9 +469,9 @@ export async function triggerNextVoteInstance(recurrenceGroupId: string): Promis
   }
 
   // Create the next instance regardless of whether current is closed
-  const newVoteId = generateRecurringVoteId(recurrenceGroupId)
   const nextStartAt = calculateNextStartAt(latestVote)
   const autoCloseAt = calculateNextAutoCloseAt(nextStartAt, latestVote)
+  const newVoteId = generateRecurringVoteId(latestVote, nextStartAt, new Date(autoCloseAt))
 
   const newVote = createNextRecurringVote(
     latestVote,
