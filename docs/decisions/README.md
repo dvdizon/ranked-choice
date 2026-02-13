@@ -7,6 +7,8 @@ Each record captures a product or architecture decision that affects behavior, U
 
 - **DR-2026-02-13-01** — Manual Tie-Breaker Trigger + Runoff ID Suffix + System Admin Vote Reopen Controls + Secret Visibility (`DR-2026-02-13-01.md`)
 - **DR-2026-02-13-02** — Recurring Contest ID Formatting + Admin Rename (`DR-2026-02-13-02.md`)
+- **DR-2026-02-13-03** — Deterministic Elimination for Full-Round IRV Ties (`DR-2026-02-13-03.md`)
+- **DR-2026-02-13-04** — Remove Manual Runoff Trigger UI/API Paths (`DR-2026-02-13-04.md`)
 - **DR-2026-02-12-01** — Weighted Elimination Tie-Breaker for IRV (`DR-2026-02-12-01.md`)
 - **DR-2026-02-12-02** — Automatic Runoff for Pure IRV Ties (`DR-2026-02-12-02.md`)
 - **DR-2026-01-25-01** — Non-Anonymous Voting with Voter Names (`DR-2026-01-25-01.md`)

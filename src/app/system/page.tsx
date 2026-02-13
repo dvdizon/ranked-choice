@@ -345,7 +345,7 @@ export default function SystemAdminPage() {
   }
 
 
-  const updateLiveVote = async (voteId: string, action: 'close' | 'reopen' | 'triggerTieBreaker') => {
+  const updateLiveVote = async (voteId: string, action: 'close' | 'reopen') => {
     if (!adminSecretValidated) {
       setLiveVotesError('Admin secret validation is required.')
       return
@@ -353,8 +353,7 @@ export default function SystemAdminPage() {
 
     const messages = {
       close: 'Close this vote? Voting will immediately stop.',
-      reopen: 'Reopen this vote? Existing ballots will remain intact.',
-      triggerTieBreaker: 'Trigger a tie breaker runoff vote for this vote?'
+      reopen: 'Reopen this vote? Existing ballots will remain intact.'
     } as const
 
     const confirmed = window.confirm(messages[action])
@@ -422,46 +421,6 @@ export default function SystemAdminPage() {
       await loadLiveVotes(nextPage)
     } catch (err) {
       setLiveVotesError('Network error while deleting vote.')
-    } finally {
-      setLiveVotesLoading(false)
-    }
-  }
-
-  const triggerLiveVoteTieBreaker = async (voteId: string) => {
-    if (!adminSecretValidated) {
-      setLiveVotesError('Admin secret validation is required.')
-      return
-    }
-
-    const confirmed = window.confirm(
-      'Trigger tie-breaker runoff now? This closes the current vote and attempts to create a runoff from tied ballots.'
-    )
-    if (!confirmed) {
-      return
-    }
-
-    setLiveVotesError('')
-    setLiveVotesLoading(true)
-
-    try {
-      const res = await fetch(withBasePath(`/api/admin/votes/${voteId}`), {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
-        },
-        body: JSON.stringify({ action: 'triggerTieBreaker' }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setLiveVotesError(data.error || 'Failed to trigger tie-breaker runoff')
-        setLiveVotesLoading(false)
-        return
-      }
-
-      await loadLiveVotes(liveVotesPage)
-    } catch (err) {
-      setLiveVotesError('Network error while triggering tie-breaker runoff.')
     } finally {
       setLiveVotesLoading(false)
     }
@@ -623,28 +582,12 @@ export default function SystemAdminPage() {
                         >
                           {vote.closed_at ? 'Reopen vote' : 'Close vote'}
                         </button>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => updateLiveVote(vote.id, 'triggerTieBreaker')}
-                          disabled={liveVotesLoading || !vote.closed_at}
-                        >
-                          Trigger tie breaker
-                        </button>
                         <Link className="btn-secondary" href={`/v/${vote.id}/admin`}>
                           Open vote admin
                         </Link>
                         <Link className="btn-secondary" href={getVoteRecreateHref(vote)}>
                           Re-create vote
                         </Link>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => triggerLiveVoteTieBreaker(vote.id)}
-                          disabled={liveVotesLoading}
-                        >
-                          Trigger tie-breaker
-                        </button>
                         <button
                           type="button"
                           className="btn-secondary"

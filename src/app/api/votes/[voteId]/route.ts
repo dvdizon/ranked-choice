@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getVote, countBallots, deleteVote, closeVote, reopenVote, updateVoteOptions, setAutoCloseAt, updateVoteId, voteExists } from '@/lib/db'
 import { canonicalizeVoteId, verifySecret, isValidVoteId } from '@/lib/auth'
 import { withBasePath } from '@/lib/paths'
-import { triggerTieRunoffForVote } from '@/lib/scheduler'
 
 export async function GET(
   request: NextRequest,
@@ -190,18 +189,6 @@ export async function PATCH(
       }
 
       updateVoteId(voteId, canonicalNewId)
-    } else if (action === 'triggerTieBreaker') {
-      const result = await triggerTieRunoffForVote(voteId, {
-        closeIfOpen: true,
-        suppressClosedNotification: true,
-      })
-
-      if (!result.success) {
-        return NextResponse.json(
-          { error: result.message || 'Failed to trigger tie-breaker runoff' },
-          { status: 400 }
-        )
-      }
     } else {
       return NextResponse.json(
         { error: 'Invalid action' },

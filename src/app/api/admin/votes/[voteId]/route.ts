@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { closeVote, deleteVote, getVote, reopenVote } from '@/lib/db'
-import { triggerTieRunoffForVote } from '@/lib/scheduler'
 
 function verifyAdminAuth(request: NextRequest): boolean {
   const adminSecret = process.env.ADMIN_SECRET
@@ -45,17 +44,6 @@ export async function PATCH(
       closeVote(voteId)
     } else if (action === 'reopen') {
       reopenVote(voteId)
-    } else if (action === 'triggerTieBreaker') {
-      const result = await triggerTieRunoffForVote(voteId, {
-        closeIfOpen: true,
-        suppressClosedNotification: true,
-      })
-      if (!result.success) {
-        return NextResponse.json(
-          { error: result.message || 'Failed to trigger tie-breaker runoff' },
-          { status: 400 }
-        )
-      }
     } else {
       return NextResponse.json(
         { error: 'Unsupported action' },

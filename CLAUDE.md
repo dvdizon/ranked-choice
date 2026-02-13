@@ -263,10 +263,6 @@ location /health {
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Contest Identification**: Vote and results pages display both contest title and vote ID
 - **Recurring Contest IDs**: Recurring votes can use format tokens (default `{title}-{close-mm-dd-yyyy}`), and admins can rename contest IDs
-- **Automatic Tie Runoff**: Pure ties can trigger an automatic second-round runoff vote (tied options only) with integration notification
-- **Manual Tie Breakers**: Vote admins and system admins can manually trigger a tie-breaker runoff for closed tied votes
-- **Manual Tie-Breaker Trigger**: Vote admins and system admins can close-and-trigger a runoff early when a tie is apparent
-- **Runoff ID Suffix**: Tie runoff votes use readable IDs ending with `-runoff-1`
 
 ### Admin Capabilities
 - **Separate Secrets**: Admin secret (for management) vs Voting secret (for ballot submission)
@@ -275,12 +271,10 @@ location /health {
   - View all ballots with voter names and timestamps
   - Delete individual ballots or entire vote
   - Close/reopen voting (prevents new submissions when closed)
-  - Trigger tie-breaker runoff for closed tied votes
   - Set or change auto-close date/time
   - Edit vote options (removes deleted options from existing ballots)
-  - Manually trigger a tie-breaker runoff (closes vote first)
 - **System Admin** (`/system`): ADMIN_SECRET protected management
-  - Monitor open/closed votes, close/reopen/delete them, trigger tie-breaker runoffs, open vote admin pages, and re-create votes with prefilled fields
+  - Monitor open/closed votes, close/reopen/delete them, open vote admin pages, and re-create votes with prefilled fields
   - Copy vote admin secrets for eligible votes when handing off admin access
   - Manage integrations (Discord, Slack, webhook)
 - **API Key Management** (`/api/admin/api-keys`): Admin-secret protected endpoints
@@ -302,7 +296,7 @@ From PLAN.md - do not modify without recording a Decision Record in `docs/decisi
 - **Majority**: >50% of active (non-exhausted) ballots
 - **Elimination**: Remove option with fewest votes each round
 - **Exhausted ballots**: Drop out when all ranked options eliminated
-- **Tie-breaking**: Lowest weighted ranking support, then lowest first-round total, then lexicographic; if still tied, declare tie
+- **Tie-breaking**: Lowest weighted ranking support, then lowest first-round total, then lexicographic; always eliminate exactly one option
 
 ## What NOT to Do
 
