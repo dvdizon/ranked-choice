@@ -226,6 +226,7 @@ export interface LiveVoteSummary {
   title: string
   options: string[]
   created_at: string
+  closed_at: string | null
   auto_close_at: string | null
   voter_names_required: boolean
   period_days: number | null
@@ -351,8 +352,6 @@ export function getLiveVotesPaginated(limit: number, offset: number): { votes: L
   const countStmt = db.prepare(`
     SELECT COUNT(*) as count
     FROM votes
-    WHERE closed_at IS NULL
-      AND (auto_close_at IS NULL OR auto_close_at > datetime('now'))
   `)
   const total = (countStmt.get() as { count: number }).count
 
@@ -362,6 +361,7 @@ export function getLiveVotesPaginated(limit: number, offset: number): { votes: L
       title,
       options,
       created_at,
+      closed_at,
       auto_close_at,
       voter_names_required,
       period_days,
@@ -371,8 +371,6 @@ export function getLiveVotesPaginated(limit: number, offset: number): { votes: L
       integration_id,
       recurrence_active
     FROM votes
-    WHERE closed_at IS NULL
-      AND (auto_close_at IS NULL OR auto_close_at > datetime('now'))
     ORDER BY created_at DESC
     LIMIT ? OFFSET ?
   `)

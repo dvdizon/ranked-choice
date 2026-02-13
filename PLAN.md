@@ -311,6 +311,7 @@ All meaningful behavior changes must be logged here.
 - 2026-02-12 — Added contest ID display on vote and results pages for easier identification
 - 2026-02-12 — Fixed recurring notifications to avoid delayed close notices and late open alerts after auto-close
 - 2026-02-12 — Added automatic second-round runoff vote creation + integration notification for pure IRV ties
+- 2026-02-13 — Added manual tie-breaker runoff trigger in vote admin + system admin, plus system-level reopen controls that preserve prior-round ballots
 
 ---
 

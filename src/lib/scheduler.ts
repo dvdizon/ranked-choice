@@ -29,6 +29,7 @@ import {
   setTieRunoffCreated,
   createVote,
   voteExists,
+  getVote,
 } from './db'
 import { notifyVoteOpened, notifyVoteClosed, notifyRunoffRequired } from './notifications'
 import { countIRV } from './irv'
@@ -222,49 +223,79 @@ async function processTieRunoffVotes(): Promise<void> {
       continue
     }
 
-    const ballots = getBallotsByVoteId(vote.id)
-    if (ballots.length === 0) {
-      setTieRunoffCreated(vote.id, '', new Date().toISOString())
-      continue
-    }
-
-    const result = countIRV(
-      vote.options,
-      ballots.map((ballot) => ({ rankings: ballot.rankings }))
-    )
-
-    if (!result.isTie || result.tiedOptions.length < 2) {
-      setTieRunoffCreated(vote.id, '', new Date().toISOString())
-      continue
-    }
-
-    const runoffVoteId = generateTieRunoffVoteId(vote.id)
-    const runoffVote = createVote(
-      runoffVoteId,
-      `${vote.title} (Runoff)`,
-      result.tiedOptions,
-      vote.write_secret_hash,
-      vote.voter_names_required,
-      calculateRunoffAutoCloseAt(vote),
-      vote.voting_secret_hash,
-      {
-        periodDays: null,
-        voteDurationHours: null,
-        recurrenceStartAt: null,
-        recurrenceGroupId: null,
-        integrationId: vote.integration_id,
-        recurrenceActive: false,
-        votingSecretPlaintext: vote.voting_secret_plaintext,
+    try {
+      await triggerTieRunoffVote(vote.id, true)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown tie runoff error'
+      if (message === 'At least one ballot is required to trigger a tie breaker' || message === 'Current results are not a tie') {
+        setTieRunoffCreated(vote.id, '', new Date().toISOString())
+        continue
       }
-    )
+      console.error(`[Scheduler] Error creating tie runoff for ${vote.id}:`, error)
+    }
+  }
+}
 
+export async function triggerTieRunoffVote(voteId: string, requireIntegration: boolean = false): Promise<Vote> {
+  const vote = getVote(voteId)
+  if (!vote) {
+    throw new Error('Vote not found')
+  }
+
+  if (!vote.closed_at) {
+    throw new Error('Vote must be closed before triggering a tie breaker')
+  }
+
+  if (vote.tie_runoff_vote_id) {
+    throw new Error(`Tie breaker already created: ${vote.tie_runoff_vote_id}`)
+  }
+
+  if (requireIntegration && !vote.integration_id) {
+    throw new Error('Integration is required to auto-create tie breaker votes')
+  }
+
+  const ballots = getBallotsByVoteId(vote.id)
+  if (ballots.length === 0) {
+    throw new Error('At least one ballot is required to trigger a tie breaker')
+  }
+
+  const result = countIRV(
+    vote.options,
+    ballots.map((ballot) => ({ rankings: ballot.rankings }))
+  )
+
+  if (!result.isTie || result.tiedOptions.length < 2) {
+    throw new Error('Current results are not a tie')
+  }
+
+  const runoffVoteId = generateTieRunoffVoteId(vote.id)
+  const runoffVote = createVote(
+    runoffVoteId,
+    `${vote.title} (Runoff)`,
+    result.tiedOptions,
+    vote.write_secret_hash,
+    vote.voter_names_required,
+    calculateRunoffAutoCloseAt(vote),
+    vote.voting_secret_hash,
+    {
+      periodDays: null,
+      voteDurationHours: null,
+      recurrenceStartAt: null,
+      recurrenceGroupId: null,
+      integrationId: vote.integration_id,
+      recurrenceActive: false,
+      votingSecretPlaintext: vote.voting_secret_plaintext,
+    }
+  )
+
+  if (vote.integration_id) {
     const baseUrl = getBaseUrl()
     const runoffPath = `${baseUrl}${withBasePath(`/v/${runoffVote.id}`)}`
     const runoffVoteUrl = runoffVote.voting_secret_plaintext
       ? `${runoffPath}?secret=${encodeURIComponent(runoffVote.voting_secret_plaintext)}`
       : runoffPath
 
-    const sent = await notifyRunoffRequired(vote.integration_id, {
+    await notifyRunoffRequired(vote.integration_id, {
       title: vote.title,
       tiedOptions: result.tiedOptions,
       voteUrl: runoffVoteUrl,
@@ -272,13 +303,10 @@ async function processTieRunoffVotes(): Promise<void> {
       sourceResultsUrl: `${baseUrl}${withBasePath(`/v/${vote.id}/results`)}`,
       autoCloseAt: runoffVote.auto_close_at,
     })
-
-    if (sent) {
-      console.log(`[Scheduler] Created tie runoff vote ${runoffVote.id} from ${vote.id}`)
-    }
-
-    setTieRunoffCreated(vote.id, runoffVote.id, new Date().toISOString())
   }
+
+  setTieRunoffCreated(vote.id, runoffVote.id, new Date().toISOString())
+  return runoffVote
 }
 
 /**

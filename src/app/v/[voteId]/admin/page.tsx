@@ -164,6 +164,42 @@ export default function AdminPage() {
     }
   }
 
+
+  const handleTriggerTieBreaker = async () => {
+    if (!vote?.closed_at) {
+      setError('Close voting before triggering a tie breaker.')
+      return
+    }
+
+    if (!confirm('Trigger a tie breaker runoff vote from the current tied results?')) {
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch(withBasePath(`/api/votes/${voteId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ writeSecret, action: 'triggerTieBreaker' }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to trigger tie breaker')
+        setLoading(false)
+        return
+      }
+
+      alert(`Tie breaker vote created: ${data.runoffVoteId}`)
+    } catch (err) {
+      setError('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleUpdateOptions = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -367,11 +403,23 @@ export default function AdminPage() {
           </button>
           <button
             className="btn-secondary"
+            onClick={handleTriggerTieBreaker}
+            disabled={loading || !vote.closed_at}
+          >
+            Trigger Tie Breaker
+          </button>
+          <button
+            className="btn-secondary"
             onClick={() => router.push(`/v/${voteId}/results`)}
           >
             View Results
           </button>
         </div>
+        {!vote.closed_at && (
+          <p className="muted" style={{ marginTop: '0.5rem' }}>
+            Close voting before triggering a tie breaker runoff vote.
+          </p>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: '1.5rem' }}>
