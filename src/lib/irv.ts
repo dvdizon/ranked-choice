@@ -18,9 +18,19 @@ export interface RoundResult {
   tallies: Record<string, number>
   activeBallotCount: number
   eliminated: string | null
+  eliminationCause: EliminationCause | null
   winner: string | null
   isTie: boolean
   tiedOptions?: string[]
+}
+
+export type EliminationCauseType = 'fewest_votes' | 'weighted_support' | 'first_round_total' | 'lexicographic'
+
+export interface EliminationCause {
+  type: EliminationCauseType
+  tiedOptions: string[]
+  weightedScores: Record<string, number>
+  firstRoundTallies: Record<string, number>
 }
 
 export interface IRVResult {
@@ -97,6 +107,7 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
           tallies,
           activeBallotCount,
           eliminated: null,
+          eliminationCause: null,
           winner: option,
           isTie: false,
         })
@@ -118,11 +129,19 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
 
     // Tie-breaking for elimination
     let toEliminate: string
+    let eliminationCause: EliminationCause
     if (lowestOptions.length === 1) {
       toEliminate = lowestOptions[0]
+      eliminationCause = {
+        type: 'fewest_votes',
+        tiedOptions: [],
+        weightedScores: {},
+        firstRoundTallies: {},
+      }
     } else {
-      // Tie-break: lowest first-round total
-      toEliminate = breakTie(lowestOptions, firstRoundTallies!, ballots)
+      const tieBreakResult = breakTie(lowestOptions, firstRoundTallies!, ballots)
+      toEliminate = tieBreakResult.eliminated
+      eliminationCause = tieBreakResult.cause
     }
 
     rounds.push({
@@ -130,6 +149,7 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
       tallies,
       activeBallotCount,
       eliminated: toEliminate,
+      eliminationCause,
       winner: null,
       isTie: false,
     })
@@ -159,6 +179,7 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
         tallies: finalTallies,
         activeBallotCount: finalActiveBallotCount,
         eliminated: null,
+        eliminationCause: null,
         winner,
         isTie: false,
       })
@@ -193,7 +214,7 @@ function breakTie(
   tiedOptions: string[],
   firstRoundTallies: Record<string, number>,
   ballots: IRVBallot[]
-): string {
+): { eliminated: string; cause: EliminationCause } {
   const weightedScores: Record<string, number> = {}
 
   for (const option of tiedOptions) {
@@ -208,20 +229,53 @@ function breakTie(
     weightedScores[option] = score
   }
 
-  // Sort by weighted score (ascending), then first-round tallies (ascending), then lexicographically
-  const sorted = [...tiedOptions].sort((a, b) => {
-    const aScore = weightedScores[a] ?? 0
-    const bScore = weightedScores[b] ?? 0
-    if (aScore !== bScore) {
-      return aScore - bScore
-    }
+  const minWeightedScore = Math.min(...tiedOptions.map((option) => weightedScores[option] ?? 0))
+  const weightedLowestOptions = tiedOptions.filter((option) => (weightedScores[option] ?? 0) === minWeightedScore)
 
-    const aVotes = firstRoundTallies[a] ?? 0
-    const bVotes = firstRoundTallies[b] ?? 0
-    if (aVotes !== bVotes) {
-      return aVotes - bVotes // Lower first-round total eliminated first
+  if (weightedLowestOptions.length === 1) {
+    return {
+      eliminated: weightedLowestOptions[0],
+      cause: {
+        type: 'weighted_support',
+        tiedOptions: [...tiedOptions],
+        weightedScores,
+        firstRoundTallies: Object.fromEntries(
+          tiedOptions.map((option) => [option, firstRoundTallies[option] ?? 0])
+        ),
+      },
     }
-    return a.localeCompare(b) // Lexicographic (alphabetically first eliminated)
-  })
-  return sorted[0]
+  }
+
+  const minFirstRoundTotal = Math.min(
+    ...weightedLowestOptions.map((option) => firstRoundTallies[option] ?? 0)
+  )
+  const firstRoundLowestOptions = weightedLowestOptions.filter(
+    (option) => (firstRoundTallies[option] ?? 0) === minFirstRoundTotal
+  )
+
+  if (firstRoundLowestOptions.length === 1) {
+    return {
+      eliminated: firstRoundLowestOptions[0],
+      cause: {
+        type: 'first_round_total',
+        tiedOptions: [...tiedOptions],
+        weightedScores,
+        firstRoundTallies: Object.fromEntries(
+          tiedOptions.map((option) => [option, firstRoundTallies[option] ?? 0])
+        ),
+      },
+    }
+  }
+
+  return {
+    eliminated: [...firstRoundLowestOptions].sort((a, b) => a.localeCompare(b))[0],
+    cause: {
+      type: 'lexicographic',
+      tiedOptions: [...tiedOptions],
+      weightedScores,
+      firstRoundTallies: Object.fromEntries(
+        tiedOptions.map((option) => [option, firstRoundTallies[option] ?? 0])
+      ),
+    },
+  }
 }

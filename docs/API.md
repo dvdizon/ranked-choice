@@ -204,9 +204,16 @@ With current IRV behavior, non-empty elections resolve to a deterministic winner
         "Pizza Palace": 2,
         "Taco Town": 1
       },
-      "eliminated": ["Taco Town"],
-      "exhausted": 0,
-      "active": 6
+      "activeBallotCount": 6,
+      "eliminated": "Taco Town",
+      "eliminationCause": {
+        "type": "fewest_votes",
+        "tiedOptions": [],
+        "weightedScores": {},
+        "firstRoundTallies": {}
+      },
+      "winner": null,
+      "isTie": false
     },
     {
       "round": 2,
@@ -214,14 +221,21 @@ With current IRV behavior, non-empty elections resolve to a deterministic winner
         "Sushi Supreme": 4,
         "Pizza Palace": 2
       },
-      "eliminated": [],
-      "exhausted": 0,
-      "active": 6,
-      "winner": "Sushi Supreme"
+      "activeBallotCount": 6,
+      "eliminated": null,
+      "eliminationCause": null,
+      "winner": "Sushi Supreme",
+      "isTie": false
     }
   ]
 }
 ```
+
+`rounds[*].eliminationCause.type` values:
+- `fewest_votes` - no tie; option had the lowest tally
+- `weighted_support` - elimination tie resolved by lowest weighted ranking support
+- `first_round_total` - weighted support still tied, resolved by lowest first-round tally
+- `lexicographic` - weighted support and first-round tallies tied, resolved by option ID ordering
 
 ---
 

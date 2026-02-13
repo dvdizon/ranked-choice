@@ -257,6 +257,7 @@ location /health {
 - **Opt-out UX**: All options start ranked in random order; voters remove unwanted options
 - **Custom Options**: Voters can suggest new options (added dynamically for all voters)
 - **Optional Voter Names**: Vote creators choose whether names are required (default) or optional; enables both coordinated and anonymous voting
+- **Elimination Cause Explanations**: Results rounds include why an option was eliminated, including tie-breaker reason when applicable
 - **Auto-Close**: Set automatic voting deadline with date/time picker
 - **Drag & Drop**: Reorder rankings with touch/mouse support (@dnd-kit) using dedicated drag handles on each row
 - **Persistent Options**: Vote creator's last-used options saved in localStorage
