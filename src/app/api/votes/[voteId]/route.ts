@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getVote, countBallots, deleteVote, closeVote, reopenVote, updateVoteOptions, setAutoCloseAt } from '@/lib/db'
-import { canonicalizeVoteId, verifySecret } from '@/lib/auth'
+import { getVote, countBallots, deleteVote, closeVote, reopenVote, updateVoteOptions, setAutoCloseAt, updateVoteId, voteExists } from '@/lib/db'
+import { canonicalizeVoteId, verifySecret, isValidVoteId } from '@/lib/auth'
 import { withBasePath } from '@/lib/paths'
-import { triggerTieRunoffVote } from '@/lib/scheduler'
+import { triggerTieRunoffForVote } from '@/lib/scheduler'
 
 export async function GET(
   request: NextRequest,
@@ -116,7 +116,7 @@ export async function PATCH(
 
     // Verify write secret
     const body = await request.json()
-    const { writeSecret, action, options, autoCloseAt } = body
+    const { writeSecret, action, options, autoCloseAt, newVoteId } = body
 
     if (!writeSecret) {
       return NextResponse.json(
@@ -166,16 +166,41 @@ export async function PATCH(
         validAutoCloseAt = autoCloseDate.toISOString()
       }
       setAutoCloseAt(voteId, validAutoCloseAt)
+    } else if (action === 'renameVoteId') {
+      if (!newVoteId || typeof newVoteId !== 'string') {
+        return NextResponse.json(
+          { error: 'New vote ID is required' },
+          { status: 400 }
+        )
+      }
+
+      const canonicalNewId = canonicalizeVoteId(newVoteId.trim())
+      if (!isValidVoteId(canonicalNewId)) {
+        return NextResponse.json(
+          { error: 'Vote ID must be 3-32 characters (lowercase letters, numbers, and dashes)' },
+          { status: 400 }
+        )
+      }
+
+      if (canonicalNewId !== voteId && voteExists(canonicalNewId)) {
+        return NextResponse.json(
+          { error: 'Vote ID already exists' },
+          { status: 409 }
+        )
+      }
+
+      updateVoteId(voteId, canonicalNewId)
     } else if (action === 'triggerTieBreaker') {
-      try {
-        const runoffVote = await triggerTieRunoffVote(voteId)
-        return NextResponse.json({
-          success: true,
-          runoffVoteId: runoffVote.id,
-        })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to trigger tie breaker'
-        return NextResponse.json({ error: message }, { status: 400 })
+      const result = await triggerTieRunoffForVote(voteId, {
+        closeIfOpen: true,
+        suppressClosedNotification: true,
+      })
+
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.message || 'Failed to trigger tie-breaker runoff' },
+          { status: 400 }
+        )
       }
     } else {
       return NextResponse.json(
@@ -185,8 +210,9 @@ export async function PATCH(
     }
 
     // Return updated vote
-    const updatedVote = getVote(voteId)
-    const ballotCount = countBallots(voteId)
+    const updatedVoteId = action === 'renameVoteId' ? canonicalizeVoteId(newVoteId.trim()) : voteId
+    const updatedVote = getVote(updatedVoteId)
+    const ballotCount = countBallots(updatedVoteId)
 
     return NextResponse.json({
       success: true,

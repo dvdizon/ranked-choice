@@ -136,13 +136,14 @@ When creating a new release:
 - Local dev path: `./data/rcv.sqlite`
 
 #### Schema
-- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `voting_secret_hash` (TEXT, nullable), `voting_secret_plaintext` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `open_notified_at` (TEXT, nullable), `closed_notified_at` (TEXT, nullable), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
+- **votes table**: `id`, `title`, `options` (JSON), `write_secret_hash`, `write_secret_plaintext` (TEXT, nullable), `voting_secret_hash` (TEXT, nullable), `voting_secret_plaintext` (TEXT, nullable), `voter_names_required` (INTEGER, default 1), `auto_close_at` (TEXT), `open_notified_at` (TEXT, nullable), `closed_notified_at` (TEXT, nullable), `created_at`, `closed_at`, `period_days` (INTEGER, nullable), `vote_duration_hours` (INTEGER, nullable), `recurrence_group_id` (TEXT, nullable), `integration_id` (INTEGER, nullable), `recurrence_active` (INTEGER, default 0)
 - **ballots table**: `id`, `vote_id`, `rankings` (JSON), `voter_name`, `created_at`
 - **api_keys table**: `id`, `key_hash`, `name`, `created_at`, `last_used_at`
 - **integrations table**: `id`, `type` (discord/slack/webhook), `name`, `config` (JSON), `created_at`
 
 **Note on secrets:** Votes have two separate secrets:
 - `write_secret_hash` (admin secret): For managing the vote (admin panel, editing, deleting)
+- `write_secret_plaintext`: Plaintext admin secret retained for system-admin recovery workflows on newer votes
 - `voting_secret_hash`: For submitting ballots. If NULL, falls back to `write_secret_hash` for backwards compatibility
 - `voting_secret_plaintext`: Plaintext voting secret stored only for recurring votes with integrations (enables Discord notifications to include voting link with secret)
 - `tie_runoff_created_at`, `tie_runoff_vote_id`: Track one-time automatic runoff creation for pure-tie outcomes on integration-enabled votes
@@ -261,8 +262,11 @@ location /health {
 - **Persistent Options**: Vote creator's last-used options saved in localStorage
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Contest Identification**: Vote and results pages display both contest title and vote ID
+- **Recurring Contest IDs**: Recurring votes can use format tokens (default `{title}-{close-mm-dd-yyyy}`), and admins can rename contest IDs
 - **Automatic Tie Runoff**: Pure ties can trigger an automatic second-round runoff vote (tied options only) with integration notification
 - **Manual Tie Breakers**: Vote admins and system admins can manually trigger a tie-breaker runoff for closed tied votes
+- **Manual Tie-Breaker Trigger**: Vote admins and system admins can close-and-trigger a runoff early when a tie is apparent
+- **Runoff ID Suffix**: Tie runoff votes use readable IDs ending with `-runoff-1`
 
 ### Admin Capabilities
 - **Separate Secrets**: Admin secret (for management) vs Voting secret (for ballot submission)
@@ -274,8 +278,10 @@ location /health {
   - Trigger tie-breaker runoff for closed tied votes
   - Set or change auto-close date/time
   - Edit vote options (removes deleted options from existing ballots)
+  - Manually trigger a tie-breaker runoff (closes vote first)
 - **System Admin** (`/system`): ADMIN_SECRET protected management
   - Monitor open/closed votes, close/reopen/delete them, trigger tie-breaker runoffs, open vote admin pages, and re-create votes with prefilled fields
+  - Copy vote admin secrets for eligible votes when handing off admin access
   - Manage integrations (Discord, Slack, webhook)
 - **API Key Management** (`/api/admin/api-keys`): Admin-secret protected endpoints
   - Create API keys for programmatic access
@@ -286,6 +292,7 @@ location /health {
 ### Vote ID Format
 - Alphanumeric characters and dashes allowed (e.g., `friday-lunch`)
 - 3-32 characters, case-insensitive (normalized to lowercase)
+- Recurring ID format tokens: `{title}`, `{close-mm-dd-yyyy}`, `{close-yyyy-mm-dd}`, `{start-mm-dd-yyyy}`, `{start-yyyy-mm-dd}`
 
 ## RCV Rules (Authoritative)
 

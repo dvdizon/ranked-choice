@@ -36,6 +36,7 @@ export default function CreateVotePage() {
   const [periodDays, setPeriodDays] = useState('7')
   const [voteDurationHours, setVoteDurationHours] = useState('24')
   const [recurrenceStartAt, setRecurrenceStartAt] = useState('')
+  const [recurrenceIdFormat, setRecurrenceIdFormat] = useState('{title}-{close-mm-dd-yyyy}')
   const [integrationId, setIntegrationId] = useState('')
   const [integrationAdminSecret, setIntegrationAdminSecret] = useState('')
   const [advancedTab, setAdvancedTab] = useState<'vote' | 'schedule' | 'notifications'>('vote')
@@ -65,6 +66,7 @@ export default function CreateVotePage() {
     const prefillPeriodDays = searchParams.get('periodDays')
     const prefillVoteDurationHours = searchParams.get('voteDurationHours')
     const prefillRecurrenceStartAt = searchParams.get('recurrenceStartAt')
+    const prefillRecurrenceIdFormat = searchParams.get('recurrenceIdFormat')
     const prefillIntegrationId = searchParams.get('integrationId')
 
     if (prefillTitle !== null) {
@@ -98,6 +100,9 @@ export default function CreateVotePage() {
     }
     if (prefillRecurrenceStartAt) {
       setRecurrenceStartAt(toDateTimeLocal(prefillRecurrenceStartAt))
+    }
+    if (prefillRecurrenceIdFormat !== null) {
+      setRecurrenceIdFormat(prefillRecurrenceIdFormat)
     }
     if (prefillIntegrationId !== null) {
       setIntegrationId(prefillIntegrationId)
@@ -205,6 +210,7 @@ export default function CreateVotePage() {
           voteDurationHours: recurrenceEnabled ? parsedVoteDurationHours : undefined,
           integrationId: parsedIntegrationId,
           recurrenceStartAt: recurrenceEnabled ? parsedRecurrenceStartAt?.toISOString() : undefined,
+          recurrenceIdFormat: recurrenceEnabled ? recurrenceIdFormat : undefined,
           integrationAdminSecret: parsedIntegrationId ? integrationAdminSecret.trim() : undefined,
         }),
       })
@@ -349,6 +355,7 @@ View results: ${resultsFullUrl}`
               setPeriodDays('7')
               setVoteDurationHours('24')
               setRecurrenceStartAt('')
+              setRecurrenceIdFormat('{title}-{close-mm-dd-yyyy}')
               setIntegrationId('')
               setIntegrationAdminSecret('')
             }}
@@ -521,6 +528,21 @@ View results: ${resultsFullUrl}`
                       />
                       <p className="muted">
                         The vote opens at this time and closes after the duration below.
+                      </p>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="recurrenceIdFormat">Contest ID format</label>
+                      <input
+                        type="text"
+                        id="recurrenceIdFormat"
+                        className="input-large"
+                        value={recurrenceIdFormat}
+                        onChange={(e) => setRecurrenceIdFormat(e.target.value)}
+                        placeholder="{title}-{close-mm-dd-yyyy}"
+                      />
+                      <p className="muted">
+                        Tokens: {'{title}'}, {'{close-mm-dd-yyyy}'}, {'{close-yyyy-mm-dd}'}, {'{start-mm-dd-yyyy}'}, {'{start-yyyy-mm-dd}'}.
                       </p>
                     </div>
 

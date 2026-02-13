@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { withBasePath } from '@/lib/paths'
+import CopyButton from '@/app/components/CopyButton'
 
 interface IntegrationSummary {
   id: number
@@ -14,6 +15,7 @@ interface LiveVoteSummary {
   id: string
   title: string
   options: string[]
+  write_secret_plaintext: string | null
   created_at: string
   closed_at: string | null
   auto_close_at: string | null
@@ -425,6 +427,46 @@ export default function SystemAdminPage() {
     }
   }
 
+  const triggerLiveVoteTieBreaker = async (voteId: string) => {
+    if (!adminSecretValidated) {
+      setLiveVotesError('Admin secret validation is required.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      'Trigger tie-breaker runoff now? This closes the current vote and attempts to create a runoff from tied ballots.'
+    )
+    if (!confirmed) {
+      return
+    }
+
+    setLiveVotesError('')
+    setLiveVotesLoading(true)
+
+    try {
+      const res = await fetch(withBasePath(`/api/admin/votes/${voteId}`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
+        },
+        body: JSON.stringify({ action: 'triggerTieBreaker' }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setLiveVotesError(data.error || 'Failed to trigger tie-breaker runoff')
+        setLiveVotesLoading(false)
+        return
+      }
+
+      await loadLiveVotes(liveVotesPage)
+    } catch (err) {
+      setLiveVotesError('Network error while triggering tie-breaker runoff.')
+    } finally {
+      setLiveVotesLoading(false)
+    }
+  }
+
   const getVoteRecreateHref = (vote: LiveVoteSummary) => {
     const params = new URLSearchParams()
     params.set('title', vote.title)
@@ -556,6 +598,21 @@ export default function SystemAdminPage() {
                             Integration ID: {vote.integration_id}
                           </p>
                         )}
+                        {vote.write_secret_plaintext ? (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <p className="muted" style={{ marginBottom: '0.25rem' }}>
+                              Vote admin secret:
+                            </p>
+                            <div className="copyable-field">
+                              <span className="secret-value">{vote.write_secret_plaintext}</span>
+                              <CopyButton text={vote.write_secret_plaintext} label="Copy vote admin secret" />
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="muted" style={{ margin: '0.5rem 0 0' }}>
+                            Vote admin secret unavailable (created before secret retention).
+                          </p>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <button
@@ -580,6 +637,14 @@ export default function SystemAdminPage() {
                         <Link className="btn-secondary" href={getVoteRecreateHref(vote)}>
                           Re-create vote
                         </Link>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => triggerLiveVoteTieBreaker(vote.id)}
+                          disabled={liveVotesLoading}
+                        >
+                          Trigger tie-breaker
+                        </button>
                         <button
                           type="button"
                           className="btn-secondary"

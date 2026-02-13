@@ -53,6 +53,7 @@ Create a new vote.
   "recurrenceStartAt": "2026-02-01T17:00:00Z",  // optional, required if recurrenceEnabled
   "periodDays": 7,  // optional, minimum 7 (required if recurrenceEnabled)
   "voteDurationHours": 24,  // optional, minimum 1 (required if recurrenceEnabled)
+  "recurrenceIdFormat": "{title}-{close-mm-dd-yyyy}",  // optional recurring contest ID pattern
   "integrationId": 3,  // optional, Discord integration ID
   "integrationAdminSecret": "ADMIN_SECRET"  // required if integrationId is provided
 }
@@ -277,7 +278,17 @@ Perform admin actions on a vote (requires write secret).
 
 Returns `runoffVoteId` when a runoff is created. The source vote must be closed and currently tied.
 
-**Response (close/reopen/update options/set auto-close):**
+**Rename Contest ID:**
+
+```json
+{
+  "writeSecret": "xYz123AbC",
+  "action": "renameVoteId",
+  "newVoteId": "friday-lunch-02-13-2026"
+}
+```
+
+**Response (close/reopen/update options/set auto-close/rename):**
 
 ```json
 {
@@ -516,6 +527,7 @@ Authorization: Bearer <ADMIN_SECRET>
       "id": "team-lunch-2026",
       "title": "Friday Lunch",
       "options": ["Pizza", "Sushi", "Tacos"],
+      "write_secret_plaintext": "admin-secret-123",
       "created_at": "2026-02-01T12:00:00Z",
       "closed_at": null,
       "auto_close_at": "2026-02-02T12:00:00Z",

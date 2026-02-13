@@ -7,6 +7,7 @@ import {
   isValidVoteId,
   canonicalizeVoteId,
 } from '@/lib/auth'
+import { buildContestIdFromFormat, createUniqueVoteId, DEFAULT_RECURRING_ID_FORMAT } from '@/lib/contest-id'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
       voteDurationHours,
       integrationId,
       recurrenceStartAt,
+      recurrenceIdFormat,
       integrationAdminSecret,
     } = body
 
@@ -63,47 +65,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate or validate vote ID
-    let voteId: string
-    if (requestedId && typeof requestedId === 'string' && requestedId.trim().length > 0) {
-      voteId = canonicalizeVoteId(requestedId.trim())
-      if (!isValidVoteId(voteId)) {
-        return NextResponse.json(
-          { error: 'Vote ID must be 3-32 characters (lowercase letters, numbers, and dashes)' },
-          { status: 400 }
-        )
-      }
-      if (voteExists(voteId)) {
-        return NextResponse.json(
-          { error: 'Vote ID already exists' },
-          { status: 409 }
-        )
-      }
-    } else {
-      // Generate unique ID
-      voteId = generateVoteId()
-      while (voteExists(voteId)) {
-        voteId = generateVoteId()
-      }
-    }
-
-    // Generate or use provided admin (write) secret
-    const adminSecret = requestedSecret && typeof requestedSecret === 'string' && requestedSecret.trim().length > 0
-      ? requestedSecret.trim()
-      : generateWriteSecret()
-
-    // Generate or use provided voting secret (separate from admin secret)
-    const votingSecret = requestedVotingSecret && typeof requestedVotingSecret === 'string' && requestedVotingSecret.trim().length > 0
-      ? requestedVotingSecret.trim()
-      : generateWriteSecret()
-
-    let validAutoCloseAt: string | null = null
     const recurringRequested = recurrenceEnabled === true
     let validPeriodDays: number | null = null
     let validVoteDurationHours: number | null = null
     let recurrenceGroupId: string | null = null
     let recurrenceActive = false
     let validRecurrenceStartAt: string | null = null
+    let validAutoCloseAt: string | null = null
+    let validRecurrenceIdFormat: string | null = null
 
     if (recurringRequested) {
       if (!recurrenceStartAt || typeof recurrenceStartAt !== 'string' || recurrenceStartAt.trim().length === 0) {
@@ -140,7 +109,6 @@ export async function POST(request: NextRequest) {
       validPeriodDays = periodValue
       validVoteDurationHours = durationValue
       validRecurrenceStartAt = startDate.toISOString()
-      recurrenceGroupId = voteId
       recurrenceActive = true
 
       const autoCloseDate = new Date(startDate.getTime() + durationValue * 60 * 60 * 1000)
@@ -151,12 +119,78 @@ export async function POST(request: NextRequest) {
         )
       }
       validAutoCloseAt = autoCloseDate.toISOString()
+
+      if (recurrenceIdFormat !== undefined && recurrenceIdFormat !== null) {
+        if (typeof recurrenceIdFormat !== 'string') {
+          return NextResponse.json(
+            { error: 'Recurring contest ID format must be a string' },
+            { status: 400 }
+          )
+        }
+        const trimmedFormat = recurrenceIdFormat.trim()
+        if (trimmedFormat.length > 80) {
+          return NextResponse.json(
+            { error: 'Recurring contest ID format must be 80 characters or less' },
+            { status: 400 }
+          )
+        }
+        validRecurrenceIdFormat = trimmedFormat.length > 0 ? trimmedFormat : DEFAULT_RECURRING_ID_FORMAT
+      } else {
+        validRecurrenceIdFormat = DEFAULT_RECURRING_ID_FORMAT
+      }
     } else if (periodDays !== undefined || voteDurationHours !== undefined) {
       return NextResponse.json(
         { error: 'Recurring settings require recurrenceEnabled=true' },
         { status: 400 }
       )
     }
+
+    // Generate or validate vote ID
+    let voteId: string
+    if (requestedId && typeof requestedId === 'string' && requestedId.trim().length > 0) {
+      voteId = canonicalizeVoteId(requestedId.trim())
+      if (!isValidVoteId(voteId)) {
+        return NextResponse.json(
+          { error: 'Vote ID must be 3-32 characters (lowercase letters, numbers, and dashes)' },
+          { status: 400 }
+        )
+      }
+      if (voteExists(voteId)) {
+        return NextResponse.json(
+          { error: 'Vote ID already exists' },
+          { status: 409 }
+        )
+      }
+    } else {
+      if (recurringRequested && validAutoCloseAt) {
+        const recurringBaseId = buildContestIdFromFormat({
+          title: title.trim(),
+          closeAt: new Date(validAutoCloseAt),
+          startAt: validRecurrenceStartAt ? new Date(validRecurrenceStartAt) : undefined,
+          format: validRecurrenceIdFormat,
+        })
+        voteId = createUniqueVoteId(recurringBaseId, voteExists)
+      } else {
+        // Generate unique ID
+        voteId = generateVoteId()
+        while (voteExists(voteId)) {
+          voteId = generateVoteId()
+        }
+      }
+    }
+
+    recurrenceGroupId = recurringRequested ? voteId : null
+
+    // Generate or use provided admin (write) secret
+    const adminSecret = requestedSecret && typeof requestedSecret === 'string' && requestedSecret.trim().length > 0
+      ? requestedSecret.trim()
+      : generateWriteSecret()
+
+    // Generate or use provided voting secret (separate from admin secret)
+    const votingSecret = requestedVotingSecret && typeof requestedVotingSecret === 'string' && requestedVotingSecret.trim().length > 0
+      ? requestedVotingSecret.trim()
+      : generateWriteSecret()
+
 
     // Validate autoCloseAt if provided (non-recurring)
     if (!recurringRequested && autoCloseAt && typeof autoCloseAt === 'string' && autoCloseAt.trim().length > 0) {
@@ -228,6 +262,7 @@ export async function POST(request: NextRequest) {
       title.trim(),
       cleanOptions,
       adminSecretHash,
+      adminSecret,
       voterNamesRequired !== false, // Default to true if not specified
       validAutoCloseAt,
       votingSecretHash,
@@ -236,6 +271,7 @@ export async function POST(request: NextRequest) {
         voteDurationHours: validVoteDurationHours,
         recurrenceStartAt: validRecurrenceStartAt,
         recurrenceGroupId,
+        recurrenceIdFormat: validRecurrenceIdFormat,
         integrationId: validIntegrationId,
         recurrenceActive,
         votingSecretPlaintext: validIntegrationId !== null ? votingSecret : null,
