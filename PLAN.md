@@ -104,7 +104,7 @@ These rules are **locked unless explicitly changed**:
   - Eliminate option with the fewest votes in the round
 - Tie-breaking:
   - Deterministic (lowest weighted ranking support, then lowest first-round total, then lexicographic option ID)
-  - If still tied, declare a tie and stop
+  - Always eliminate exactly one option per round (no explicit runoff required)
 
 Any change to these rules **must be recorded in `docs/decisions/`**.
 
@@ -314,6 +314,8 @@ All meaningful behavior changes must be logged here.
 - 2026-02-13 — Added manual tie-breaker runoff trigger in vote admin + system admin, plus system-level reopen controls that preserve prior-round ballots
 - 2026-02-13 — Added recurring contest ID formatting tokens and admin contest ID rename support - See DR-2026-02-13-02
 - 2026-02-13 — Updated tie-breaker runoffs to close-and-trigger when requested, use `-runoff-1` IDs, and expose copyable vote admin secrets in system admin - See DR-2026-02-13-01
+- 2026-02-13 — Updated IRV to never end in a non-empty-ballot tie: full-round ties now eliminate one option deterministically using weighted support, first-round totals, then lexicographic fallback - See DR-2026-02-13-03
+- 2026-02-13 — Removed manual tie-breaker runoff trigger UI/API paths after deterministic full-round tie elimination made explicit runoff triggering unnecessary - See DR-2026-02-13-04
 
 ---
 

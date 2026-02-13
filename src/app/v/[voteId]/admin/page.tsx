@@ -169,39 +169,6 @@ export default function AdminPage() {
     }
   }
 
-  const handleTriggerTieBreaker = async () => {
-    const confirmed = window.confirm(
-      'Trigger tie-breaker runoff now? This closes the current vote and attempts to create a runoff from tied ballots.'
-    )
-    if (!confirmed) {
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}`), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ writeSecret, action: 'triggerTieBreaker' }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Failed to trigger tie-breaker runoff')
-        setLoading(false)
-        return
-      }
-
-      setVote(data.vote)
-    } catch (err) {
-      setError('Network error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleUpdateOptions = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -445,9 +412,6 @@ export default function AdminPage() {
             onClick={() => router.push(`/v/${activeVoteId}/results`)}
           >
             View Results
-          </button>
-          <button className="btn-secondary" onClick={handleTriggerTieBreaker} disabled={loading}>
-            Trigger Tie-Breaker
           </button>
         </div>
       </div>

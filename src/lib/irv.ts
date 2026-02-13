@@ -6,7 +6,7 @@
  * - Exhausted ballots: If all ranked options are eliminated, ballot no longer counts
  * - Elimination: Eliminate option with the fewest votes in the round
  * - Tie-breaking: Deterministic (weighted ranking support, then lowest first-round total, then lexicographic option ID)
- * - If still tied, declare a tie and stop
+ * - No explicit runoff round: tied elimination rounds always remove one option deterministically
  */
 
 export interface IRVBallot {
@@ -116,26 +116,6 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
       .filter(([_, votes]) => votes === minVotes)
       .map(([opt]) => opt)
 
-    // If all remaining options are tied with same votes
-    if (lowestOptions.length === remainingOptions.size) {
-      rounds.push({
-        round: roundNumber,
-        tallies,
-        activeBallotCount,
-        eliminated: null,
-        winner: null,
-        isTie: true,
-        tiedOptions: lowestOptions,
-      })
-      return {
-        winner: null,
-        isTie: true,
-        tiedOptions: lowestOptions,
-        totalBallots: ballots.length,
-        rounds,
-      }
-    }
-
     // Tie-breaking for elimination
     let toEliminate: string
     if (lowestOptions.length === 1) {
@@ -196,7 +176,7 @@ export function countIRV(options: string[], ballots: IRVBallot[]): IRVResult {
   // Should not reach here, but handle edge case
   return {
     winner: null,
-    isTie: true,
+    isTie: false,
     tiedOptions: [],
     totalBallots: ballots.length,
     rounds,

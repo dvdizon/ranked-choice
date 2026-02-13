@@ -25,8 +25,7 @@ It uses **Instant-Runoff Voting (IRV)**:
 - Majority (>50%) wins
 - Lowest option is eliminated each round
 - Ties for elimination use weighted ranking support, then first-round totals, then option ID
-- Ballots are redistributed until a winner (or tie) is reached
-- Pure ties can automatically trigger a second-round runoff (for integration-enabled votes), and admins can also trigger runoff tie breakers manually for closed tied contests
+- Ballots are redistributed until a deterministic winner is reached for non-empty elections
 
 ---
 
@@ -83,7 +82,7 @@ npm test
 7. Optionally manage Discord integrations on the System Admin page (`/system`):
    - Validate `ADMIN_SECRET` to access integration controls
    - Create integrations and copy the integration ID
-   - Review live votes, copy vote admin secrets (when available), and trigger tie-breaker runoff
+   - Review live votes and copy vote admin secrets (when available)
 8. Optionally attach Discord notifications (under advanced options → Notifications tab):
    - Enter a Discord integration ID (from System Admin)
    - Provide the admin API secret to attach notifications
@@ -121,10 +120,9 @@ You'll receive three URLs:
 ### Viewing Results
 
 1. Go to `/v/<vote-id>/results`
-2. See the winner (or tie), with contest title and ID shown at the top for clarity
-3. If a pure tie is detected on an integration-enabled vote, a runoff vote is automatically created with only the tied options and announced to the same integration channel
-4. Vote admins can manually trigger a tie-breaker runoff from the admin panel after closing voting
-4. View round-by-round elimination details
+2. See the winner, with contest title and ID shown at the top for clarity
+3. View round-by-round elimination details
+4. See active ballot counts and eliminated options for each round
 5. See all submitted ballots with voter names (or "Anonymous" if name not provided)
 
 ### Managing a Vote (Admin Panel)
@@ -146,7 +144,7 @@ You'll receive three URLs:
 2. Enter the `ADMIN_SECRET`
 3. Manage votes:
    - Review a paginated list of open and closed votes
-   - Close/reopen voting, trigger tie-breaker runoffs, delete votes, or re-create votes with pre-filled fields
+   - Close/reopen voting, delete votes, or re-create votes with pre-filled fields
    - Open any vote's admin panel directly from the system admin vote list
 4. Manage integrations:
    - Create a new Discord integration (webhook URL required)
@@ -284,11 +282,9 @@ See `.github/workflows/ci.yml` for full configuration details.
 - **Share Message**: Easy-to-copy formatted message with voting link (includes secret) and results link
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Admin Panel**: Full vote management (delete, close/reopen, edit options, set auto-close, rename contest ID)
-- **Manual Tie-Breaker Trigger**: Vote admins and system admins can force tie-breaker runoff creation (the source vote closes first)
 - **System Admin Secret Recovery**: System admin live-vote cards show a copyable vote admin secret when available
 - **REST API**: Full programmatic access for automated vote creation (see [docs/API.md](docs/API.md))
 - **Vote IDs**: Support dashes for readable URLs plus recurring ID format tokens (e.g., `/v/friday-lunch-02-13-2026`)
-- **Runoff Vote IDs**: Tie-breaker runoff IDs use a readable `-runoff-1` suffix
 
 ### Key Files
 

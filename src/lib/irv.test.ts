@@ -139,7 +139,7 @@ describe('IRV Algorithm', () => {
       expect(result.rounds[0].eliminated).toBe('C')
     })
 
-    it('should declare tie when all remaining options have equal votes', () => {
+    it('should deterministically eliminate on equal-vote rounds instead of declaring tie', () => {
       const options = ['A', 'B']
       const ballots: IRVBallot[] = [
         { rankings: ['A', 'B'] },
@@ -148,12 +148,12 @@ describe('IRV Algorithm', () => {
 
       const result = countIRV(options, ballots)
 
-      expect(result.winner).toBe(null)
-      expect(result.isTie).toBe(true)
-      expect(result.tiedOptions.sort()).toEqual(['A', 'B'])
+      expect(result.winner).toBe('B')
+      expect(result.isTie).toBe(false)
+      expect(result.rounds[0].eliminated).toBe('A')
     })
 
-    it('should use lexicographic tie-breaker when first-round totals are equal', () => {
+    it('should use lexicographic tie-breaker when weighted and first-round totals are equal', () => {
       const options = ['C', 'B', 'A']
       const ballots: IRVBallot[] = [
         { rankings: ['A'] },
@@ -162,9 +162,30 @@ describe('IRV Algorithm', () => {
       ]
 
       const result = countIRV(options, ballots)
-      // All tied at 1 vote each, should declare overall tie
-      expect(result.isTie).toBe(true)
-      expect(result.tiedOptions.sort()).toEqual(['A', 'B', 'C'])
+      expect(result.isTie).toBe(false)
+      expect(result.rounds[0].eliminated).toBe('A')
+      expect(result.rounds[1].eliminated).toBe('B')
+      expect(result.winner).toBe('C')
+    })
+
+    it('should resolve a repeated 4-way tie using weighted elimination over all ballots', () => {
+      const options = ['A', 'B', 'C', 'D']
+      const ballots: IRVBallot[] = [
+        { rankings: ['A', 'B', 'C', 'D'] },
+        { rankings: ['B', 'C', 'D', 'A'] },
+        { rankings: ['C', 'D', 'A', 'B'] },
+        { rankings: ['D', 'A', 'B', 'C'] },
+      ]
+
+      const result = countIRV(options, ballots)
+
+      // Round 1 is a 1-1-1-1 tie. Weighted + first-round are equal, so lexicographic eliminates A.
+      // Subsequent rounds continue with the same relative rankings among remaining options.
+      expect(result.rounds[0].eliminated).toBe('A')
+      expect(result.rounds[1].eliminated).toBe('C')
+      expect(result.rounds[2].eliminated).toBe('B')
+      expect(result.rounds[3].winner).toBe('D')
+      expect(result.isTie).toBe(false)
     })
   })
 

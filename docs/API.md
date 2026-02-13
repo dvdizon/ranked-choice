@@ -188,6 +188,8 @@ Submit a ballot (requires voting secret).
 
 Get IRV calculation results.
 
+With current IRV behavior, non-empty elections resolve to a deterministic winner (no explicit runoff required).
+
 **Response:**
 
 ```json
@@ -267,17 +269,6 @@ Perform admin actions on a vote (requires write secret).
 }
 ```
 
-**Trigger Tie Breaker Runoff:**
-
-```json
-{
-  "writeSecret": "xYz123AbC",
-  "action": "triggerTieBreaker"
-}
-```
-
-Returns `runoffVoteId` when a runoff is created. The source vote must be closed and currently tied.
-
 **Rename Contest ID:**
 
 ```json
@@ -303,15 +294,6 @@ Returns `runoffVoteId` when a runoff is created. The source vote must be closed 
     "voter_names_required": true,
     "ballotCount": 5
   }
-}
-```
-
-**Response (trigger tie breaker):**
-
-```json
-{
-  "success": true,
-  "runoffVoteId": "team-lunch-2026-runoff"
 }
 ```
 
@@ -549,7 +531,7 @@ Authorization: Bearer <ADMIN_SECRET>
 
 **PATCH** `/api/admin/votes/:voteId`
 
-Close, reopen, or trigger a tie-breaker runoff vote (admin secret required).
+Close or reopen a vote (admin secret required).
 
 **Headers:**
 
@@ -566,22 +548,12 @@ Authorization: Bearer <ADMIN_SECRET>
 ```
 
 Use `"reopen"` to reopen a closed vote without deleting existing ballots.
-Use `"triggerTieBreaker"` to create a runoff for a closed tied vote.
 
 **Response:**
 
 ```json
 {
   "success": true
-}
-```
-
-When `action` is `"triggerTieBreaker"`, response also includes:
-
-```json
-{
-  "success": true,
-  "runoffVoteId": "team-lunch-2026-runoff"
 }
 ```
 
@@ -727,7 +699,7 @@ Allowed `eventType` values:
 - `vote_opened` (default)
 - `vote_created`
 - `vote_closed`
-- `runoff_required` (sent automatically when a pure tie creates a second-round runoff vote)
+- `runoff_required` (legacy event type for runoff notifications)
 
 **Response:**
 
