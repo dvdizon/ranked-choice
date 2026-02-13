@@ -14,6 +14,7 @@ import {
   sendVoteCreatedNotification as sendDiscordVoteCreated,
   sendVoteOpenNotification as sendDiscordVoteOpened,
   sendVoteClosedNotification as sendDiscordVoteClosed,
+  sendRunoffRequiredNotification as sendDiscordRunoffRequired,
 } from './discord'
 
 export interface VoteCreatedEvent {
@@ -38,6 +39,15 @@ export interface VoteOpenedEvent {
   resultsUrl: string
   autoCloseAt?: string | null
   surveyName?: string
+}
+
+export interface RunoffRequiredEvent {
+  title: string
+  tiedOptions: string[]
+  voteUrl: string
+  resultsUrl: string
+  sourceResultsUrl: string
+  autoCloseAt?: string | null
 }
 
 /**
@@ -91,13 +101,31 @@ export async function notifyVoteClosed(
   return sendNotification(integration, 'vote_closed', event)
 }
 
+
+/**
+ * Send a runoff-required notification via the specified integration
+ * Fire-and-forget: logs errors but doesn't throw
+ */
+export async function notifyRunoffRequired(
+  integrationId: number,
+  event: RunoffRequiredEvent
+): Promise<boolean> {
+  const integration = getIntegrationById(integrationId)
+  if (!integration) {
+    console.error(`Integration not found: ${integrationId}`)
+    return false
+  }
+
+  return sendNotification(integration, 'runoff_required', event)
+}
+
 /**
  * Route notification to the appropriate platform handler
  */
 async function sendNotification(
   integration: Integration,
-  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
-  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed' | 'runoff_required',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent | RunoffRequiredEvent
 ): Promise<boolean> {
   switch (integration.type) {
     case 'discord':
@@ -117,8 +145,8 @@ async function sendNotification(
  */
 async function handleDiscordNotification(
   config: DiscordIntegrationConfig,
-  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
-  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed' | 'runoff_required',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent | RunoffRequiredEvent
 ): Promise<boolean> {
   if (eventType === 'vote_created') {
     const e = event as VoteCreatedEvent
@@ -138,7 +166,7 @@ async function handleDiscordNotification(
       autoCloseAt: e.autoCloseAt,
       surveyName: e.surveyName,
     })
-  } else {
+  } else if (eventType === 'vote_closed') {
     const e = event as VoteClosedEvent
     return sendDiscordVoteClosed(config.webhook_url, {
       title: e.title,
@@ -146,6 +174,16 @@ async function handleDiscordNotification(
       winner: e.winner,
       totalBallots: e.totalBallots,
       surveyName: e.surveyName,
+    })
+  } else {
+    const e = event as RunoffRequiredEvent
+    return sendDiscordRunoffRequired(config.webhook_url, {
+      title: e.title,
+      tiedOptions: e.tiedOptions,
+      voteUrl: e.voteUrl,
+      resultsUrl: e.resultsUrl,
+      sourceResultsUrl: e.sourceResultsUrl,
+      autoCloseAt: e.autoCloseAt,
     })
   }
 }
@@ -155,8 +193,8 @@ async function handleDiscordNotification(
  */
 async function handleSlackNotification(
   config: SlackIntegrationConfig,
-  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
-  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed' | 'runoff_required',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent | RunoffRequiredEvent
 ): Promise<boolean> {
   try {
     let blocks: any[]
@@ -216,7 +254,7 @@ async function handleSlackNotification(
           ],
         })
       }
-    } else {
+    } else if (eventType === 'vote_closed') {
       const e = event as VoteClosedEvent
       blocks = [
         {
@@ -251,6 +289,58 @@ async function handleSlackNotification(
           ],
         },
       ]
+    } else {
+      const e = event as RunoffRequiredEvent
+      blocks = [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: `Runoff Required: ${e.title}`,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `The previous vote ended in a pure tie between *${e.tiedOptions.join(', ')}*. A second-round runoff vote is now open.`,
+          },
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: { type: 'plain_text', text: 'Cast Runoff Vote' },
+              url: e.voteUrl,
+              style: 'primary',
+            },
+            {
+              type: 'button',
+              text: { type: 'plain_text', text: 'Runoff Results' },
+              url: e.resultsUrl,
+            },
+            {
+              type: 'button',
+              text: { type: 'plain_text', text: 'Previous Results' },
+              url: e.sourceResultsUrl,
+            },
+          ],
+        },
+      ]
+
+      if (e.autoCloseAt) {
+        const closeDate = new Date(e.autoCloseAt)
+        blocks.push({
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `Runoff closes <!date^${Math.floor(closeDate.getTime() / 1000)}^{date_short_pretty} at {time}|${closeDate.toISOString()}>`,
+            },
+          ],
+        })
+      }
     }
 
     const response = await fetch(config.webhook_url, {
@@ -277,8 +367,8 @@ async function handleSlackNotification(
  */
 async function handleGenericWebhook(
   config: WebhookIntegrationConfig,
-  eventType: 'vote_created' | 'vote_opened' | 'vote_closed',
-  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent
+  eventType: 'vote_created' | 'vote_opened' | 'vote_closed' | 'runoff_required',
+  event: VoteCreatedEvent | VoteOpenedEvent | VoteClosedEvent | RunoffRequiredEvent
 ): Promise<boolean> {
   try {
     const payload = {

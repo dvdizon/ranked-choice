@@ -11,6 +11,7 @@ This document tracks work history, including what was implemented by AI agents a
 ### Added
 - **Contest ID Visibility** - Vote and results pages now show the contest ID under the title so closed or shared contests are easier to identify.
 - **Mobile Drag Handle UX** - Ranking rows now use a dedicated ☰ drag handle to reduce accidental reordering while scrolling on touch devices.
+- **Automatic Tie Runoff Votes** - Closed votes that end in a pure IRV tie now automatically create a second-round runoff with only the tied options and notify the same integration channel/group.
 
 ### Changed
 - **IRV Tie-Breaking** - Elimination ties now use weighted ranking support before first-round totals and lexicographic fallback.

@@ -682,6 +682,7 @@ Allowed `eventType` values:
 - `vote_opened` (default)
 - `vote_created`
 - `vote_closed`
+- `runoff_required` (sent automatically when a pure tie creates a second-round runoff vote)
 
 **Response:**
 

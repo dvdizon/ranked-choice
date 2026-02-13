@@ -145,6 +145,7 @@ When creating a new release:
 - `write_secret_hash` (admin secret): For managing the vote (admin panel, editing, deleting)
 - `voting_secret_hash`: For submitting ballots. If NULL, falls back to `write_secret_hash` for backwards compatibility
 - `voting_secret_plaintext`: Plaintext voting secret stored only for recurring votes with integrations (enables Discord notifications to include voting link with secret)
+- `tie_runoff_created_at`, `tie_runoff_vote_id`: Track one-time automatic runoff creation for pure-tie outcomes on integration-enabled votes
 
 **Note on recurring votes:** Votes can be configured to recur automatically:
 - `period_days`: How often (in days) a new vote instance is created (min 7)
@@ -260,6 +261,7 @@ location /health {
 - **Persistent Options**: Vote creator's last-used options saved in localStorage
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Contest Identification**: Vote and results pages display both contest title and vote ID
+- **Automatic Tie Runoff**: Pure ties can trigger an automatic second-round runoff vote (tied options only) with integration notification
 
 ### Admin Capabilities
 - **Separate Secrets**: Admin secret (for management) vs Voting secret (for ballot submission)

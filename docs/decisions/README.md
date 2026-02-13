@@ -6,6 +6,7 @@ Each record captures a product or architecture decision that affects behavior, U
 ## Index
 
 - **DR-2026-02-12-01** — Weighted Elimination Tie-Breaker for IRV (`DR-2026-02-12-01.md`)
+- **DR-2026-02-12-02** — Automatic Runoff for Pure IRV Ties (`DR-2026-02-12-02.md`)
 - **DR-2026-01-25-01** — Non-Anonymous Voting with Voter Names (`DR-2026-01-25-01.md`)
 - **DR-2026-01-25-02** — Opt-Out Voting Behavior (`DR-2026-01-25-02.md`)
 - **DR-2026-01-25-03** — Dynamic "Other" Options (`DR-2026-01-25-03.md`)

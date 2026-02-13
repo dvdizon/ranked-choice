@@ -218,3 +218,62 @@ export async function sendVoteClosedNotification(
     embeds: [embed],
   })
 }
+
+/**
+ * Send a runoff-required notification to Discord
+ */
+export async function sendRunoffRequiredNotification(
+  webhookUrl: string,
+  options: {
+    title: string
+    tiedOptions: string[]
+    voteUrl: string
+    resultsUrl: string
+    sourceResultsUrl: string
+    autoCloseAt?: string | null
+  }
+): Promise<boolean> {
+  const fields: DiscordEmbed['fields'] = [
+    {
+      name: 'Tied Options',
+      value: options.tiedOptions.join(', '),
+      inline: false,
+    },
+    {
+      name: 'Runoff Vote',
+      value: `[Cast runoff vote](${options.voteUrl})`,
+      inline: true,
+    },
+    {
+      name: 'Runoff Results',
+      value: `[Track runoff results](${options.resultsUrl})`,
+      inline: true,
+    },
+    {
+      name: 'Previous Round',
+      value: `[View tied round results](${options.sourceResultsUrl})`,
+      inline: false,
+    },
+  ]
+
+  if (options.autoCloseAt) {
+    const closeDate = new Date(options.autoCloseAt)
+    fields.push({
+      name: 'Runoff Closes',
+      value: `<t:${Math.floor(closeDate.getTime() / 1000)}:R>`,
+      inline: false,
+    })
+  }
+
+  const embed: DiscordEmbed = {
+    title: `Runoff Required: ${options.title}`,
+    description: 'The previous round ended in a pure tie. A second-round runoff vote is now open.',
+    color: DISCORD_COLORS.warning,
+    fields,
+    timestamp: new Date().toISOString(),
+  }
+
+  return sendDiscordWebhook(webhookUrl, {
+    embeds: [embed],
+  })
+}

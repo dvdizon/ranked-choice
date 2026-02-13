@@ -25,8 +25,12 @@ import {
   getVotesNeedingClosedNotification,
   closeVote,
   Vote,
+  getVotesNeedingTieRunoff,
+  setTieRunoffCreated,
+  createVote,
+  voteExists,
 } from './db'
-import { notifyVoteOpened, notifyVoteClosed } from './notifications'
+import { notifyVoteOpened, notifyVoteClosed, notifyRunoffRequired } from './notifications'
 import { countIRV } from './irv'
 import { getBaseUrl, withBasePath } from './paths'
 
@@ -170,6 +174,113 @@ async function processOpenNotifications(): Promise<void> {
   }
 }
 
+
+
+/**
+ * Generate a unique vote ID for a tie runoff vote while respecting 32-char limit.
+ */
+function generateTieRunoffVoteId(sourceVoteId: string): string {
+  const suffix = `r2-${Date.now().toString(36)}`
+  const maxPrefixLength = Math.max(3, 32 - suffix.length - 1)
+  const prefix = sourceVoteId.slice(0, maxPrefixLength).replace(/-+$/g, '') || 'runoff'
+  let candidate = `${prefix}-${suffix}`
+
+  while (voteExists(candidate)) {
+    const nextSuffix = `r2-${Date.now().toString(36)}${Math.floor(Math.random() * 9)}`
+    const nextPrefix = sourceVoteId.slice(0, Math.max(3, 32 - nextSuffix.length - 1)).replace(/-+$/g, '') || 'runoff'
+    candidate = `${nextPrefix}-${nextSuffix}`
+  }
+
+  return candidate
+}
+
+/**
+ * Preserve the original vote duration when opening a tie runoff vote.
+ */
+function calculateRunoffAutoCloseAt(vote: Vote): string | null {
+  if (!vote.auto_close_at) return null
+
+  const createdAt = new Date(vote.created_at)
+  const closedAt = new Date(vote.auto_close_at)
+  const durationMs = closedAt.getTime() - createdAt.getTime()
+
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    return null
+  }
+
+  return new Date(Date.now() + durationMs).toISOString()
+}
+
+/**
+ * Create and notify a second-round runoff when a pure tie is detected.
+ */
+async function processTieRunoffVotes(): Promise<void> {
+  const closedVotes = getVotesNeedingTieRunoff()
+
+  for (const vote of closedVotes) {
+    if (!vote.integration_id) {
+      continue
+    }
+
+    const ballots = getBallotsByVoteId(vote.id)
+    if (ballots.length === 0) {
+      setTieRunoffCreated(vote.id, '', new Date().toISOString())
+      continue
+    }
+
+    const result = countIRV(
+      vote.options,
+      ballots.map((ballot) => ({ rankings: ballot.rankings }))
+    )
+
+    if (!result.isTie || result.tiedOptions.length < 2) {
+      setTieRunoffCreated(vote.id, '', new Date().toISOString())
+      continue
+    }
+
+    const runoffVoteId = generateTieRunoffVoteId(vote.id)
+    const runoffVote = createVote(
+      runoffVoteId,
+      `${vote.title} (Runoff)`,
+      result.tiedOptions,
+      vote.write_secret_hash,
+      vote.voter_names_required,
+      calculateRunoffAutoCloseAt(vote),
+      vote.voting_secret_hash,
+      {
+        periodDays: null,
+        voteDurationHours: null,
+        recurrenceStartAt: null,
+        recurrenceGroupId: null,
+        integrationId: vote.integration_id,
+        recurrenceActive: false,
+        votingSecretPlaintext: vote.voting_secret_plaintext,
+      }
+    )
+
+    const baseUrl = getBaseUrl()
+    const runoffPath = `${baseUrl}${withBasePath(`/v/${runoffVote.id}`)}`
+    const runoffVoteUrl = runoffVote.voting_secret_plaintext
+      ? `${runoffPath}?secret=${encodeURIComponent(runoffVote.voting_secret_plaintext)}`
+      : runoffPath
+
+    const sent = await notifyRunoffRequired(vote.integration_id, {
+      title: vote.title,
+      tiedOptions: result.tiedOptions,
+      voteUrl: runoffVoteUrl,
+      resultsUrl: `${baseUrl}${withBasePath(`/v/${runoffVote.id}/results`)}`,
+      sourceResultsUrl: `${baseUrl}${withBasePath(`/v/${vote.id}/results`)}`,
+      autoCloseAt: runoffVote.auto_close_at,
+    })
+
+    if (sent) {
+      console.log(`[Scheduler] Created tie runoff vote ${runoffVote.id} from ${vote.id}`)
+    }
+
+    setTieRunoffCreated(vote.id, runoffVote.id, new Date().toISOString())
+  }
+}
+
 /**
  * Process a closed recurring vote - create next instance and send notifications
  */
@@ -200,6 +311,8 @@ async function processClosedRecurringVote(closedVote: Vote): Promise<void> {
  */
 async function schedulerTick(): Promise<void> {
   await processClosedNotifications()
+  await processOpenNotifications()
+  await processTieRunoffVotes()
 
   // Check system-wide limit on active recurring groups
   const activeGroups = countActiveRecurringVoteGroups()
@@ -227,8 +340,6 @@ async function schedulerTick(): Promise<void> {
   for (const vote of votesToProcess) {
     await processClosedRecurringVote(vote)
   }
-
-  await processOpenNotifications()
 }
 
 /**

@@ -26,6 +26,7 @@ It uses **Instant-Runoff Voting (IRV)**:
 - Lowest option is eliminated each round
 - Ties for elimination use weighted ranking support, then first-round totals, then option ID
 - Ballots are redistributed until a winner (or tie) is reached
+- Pure ties can automatically trigger a second-round runoff (for integration-enabled votes)
 
 ---
 
@@ -119,8 +120,9 @@ You'll receive three URLs:
 
 1. Go to `/v/<vote-id>/results`
 2. See the winner (or tie), with contest title and ID shown at the top for clarity
-3. View round-by-round elimination details
-4. See all submitted ballots with voter names (or "Anonymous" if name not provided)
+3. If a pure tie is detected on an integration-enabled vote, a runoff vote is automatically created with only the tied options and announced to the same integration channel
+4. View round-by-round elimination details
+5. See all submitted ballots with voter names (or "Anonymous" if name not provided)
 
 ### Managing a Vote (Admin Panel)
 
