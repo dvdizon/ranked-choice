@@ -5,6 +5,7 @@ Each record captures a product or architecture decision that affects behavior, U
 
 ## Index
 
+- **DR-2026-02-13-05** — Explain Elimination Cause in Results (`DR-2026-02-13-05.md`)
 - **DR-2026-02-13-01** — Manual Tie-Breaker Trigger + Runoff ID Suffix + System Admin Vote Reopen Controls + Secret Visibility (`DR-2026-02-13-01.md`)
 - **DR-2026-02-13-02** — Recurring Contest ID Formatting + Admin Rename (`DR-2026-02-13-02.md`)
 - **DR-2026-02-13-03** — Deterministic Elimination for Full-Round IRV Ties (`DR-2026-02-13-03.md`)

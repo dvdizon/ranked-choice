@@ -122,7 +122,7 @@ You'll receive three URLs:
 1. Go to `/v/<vote-id>/results`
 2. See the winner, with contest title and ID shown at the top for clarity
 3. View round-by-round elimination details
-4. See active ballot counts and eliminated options for each round
+4. See active ballot counts, eliminated options, and the elimination cause for each round (including tie-breaker rationale)
 5. See all submitted ballots with voter names (or "Anonymous" if name not provided)
 
 ### Managing a Vote (Admin Panel)
@@ -270,6 +270,7 @@ See `.github/workflows/ci.yml` for full configuration details.
 ### Key Features
 
 - **Ranked Choice Voting (IRV)**: Instant-runoff voting with explainable round-by-round results
+- **Elimination Cause Transparency**: Each eliminated option includes why it was removed, including tie-breaker cause when applicable
 - **Opt-Out Voting UX**: All options pre-ranked; remove unwanted choices
 - **Custom Options**: Voters can suggest new options dynamically
 - **Auto-Close**: Set automatic voting deadline with date/time picker

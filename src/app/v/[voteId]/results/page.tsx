@@ -9,6 +9,12 @@ interface RoundResult {
   tallies: Record<string, number>
   activeBallotCount: number
   eliminated: string | null
+  eliminationCause: {
+    type: 'fewest_votes' | 'weighted_support' | 'first_round_total' | 'lexicographic'
+    tiedOptions: string[]
+    weightedScores: Record<string, number>
+    firstRoundTallies: Record<string, number>
+  } | null
   winner: string | null
   isTie: boolean
   tiedOptions?: string[]
@@ -133,6 +139,31 @@ export default function ResultsPage() {
     1
   )
 
+  const getEliminationCauseText = (round: RoundResult): string | null => {
+    if (!round.eliminated || !round.eliminationCause) return null
+
+    const cause = round.eliminationCause
+    if (cause.type === 'fewest_votes') {
+      return `${round.eliminated} had the fewest votes this round.`
+    }
+
+    if (cause.type === 'weighted_support') {
+      const weightedSummary = cause.tiedOptions
+        .map((option) => `${option}: ${cause.weightedScores[option] ?? 0}`)
+        .join(', ')
+      return `Tie for lowest votes (${cause.tiedOptions.join(', ')}). Weighted ranking support broke the tie (${weightedSummary}); ${round.eliminated} had the lowest support.`
+    }
+
+    if (cause.type === 'first_round_total') {
+      const firstRoundSummary = cause.tiedOptions
+        .map((option) => `${option}: ${cause.firstRoundTallies[option] ?? 0}`)
+        .join(', ')
+      return `Tie persisted after weighted support. First-round totals broke the tie (${firstRoundSummary}); ${round.eliminated} was lowest.`
+    }
+
+    return `Tie persisted after weighted support and first-round totals among ${cause.tiedOptions.join(', ')}. Lexicographic fallback eliminated ${round.eliminated}.`
+  }
+
   return (
     <div className="fade-in">
       <h1>{vote.title}</h1>
@@ -170,69 +201,78 @@ export default function ResultsPage() {
             IRV eliminates the lowest-voted option each round until one has &gt;50%.
           </p>
 
-          {results.rounds.map((round) => (
-            <div key={round.round} className="round-card">
-              <div className="round-header">
-                <h3>Round {round.round}</h3>
-                <span className="muted">
-                  {round.activeBallotCount} active ballot{round.activeBallotCount !== 1 ? 's' : ''}
-                </span>
+          {results.rounds.map((round) => {
+            const eliminationCauseText = getEliminationCauseText(round)
+
+            return (
+              <div key={round.round} className="round-card">
+                <div className="round-header">
+                  <h3>Round {round.round}</h3>
+                  <span className="muted">
+                    {round.activeBallotCount} active ballot{round.activeBallotCount !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div className="round-tallies">
+                  {Object.entries(round.tallies)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([option, votes]) => {
+                      const percentage = round.activeBallotCount > 0
+                        ? (votes / round.activeBallotCount) * 100
+                        : 0
+                      const isWinner = round.winner === option
+                      const isEliminated = round.eliminated === option
+
+                      return (
+                        <div key={option} className="tally-bar">
+                          <span
+                            className="tally-name"
+                            style={{
+                              textDecoration: isEliminated ? 'line-through' : 'none',
+                              color: isEliminated ? 'var(--muted)' : 'inherit',
+                            }}
+                          >
+                            {option}
+                          </span>
+                          <div
+                            className="tally-bar-fill"
+                            style={{
+                              width: `${(votes / maxVotes) * 150}px`,
+                              background: isWinner
+                                ? 'var(--success)'
+                                : isEliminated
+                                ? '#dc354555'
+                                : 'var(--accent)',
+                            }}
+                          />
+                          <span className="tally-count">
+                            {votes} ({percentage.toFixed(1)}%)
+                          </span>
+                          {isWinner && <span className="winner-badge">Winner</span>}
+                        </div>
+                      )
+                    })}
+                </div>
+
+                {round.eliminated && (
+                  <p className="eliminated">
+                    Eliminated: <strong>{round.eliminated}</strong>
+                  </p>
+                )}
+                {round.eliminated && eliminationCauseText && (
+                  <p className="muted" style={{ marginTop: '-0.25rem' }}>
+                    {eliminationCauseText}
+                  </p>
+                )}
+
+                {round.isTie && round.tiedOptions && (
+                  <p style={{ color: '#856404' }}>
+                    Tie declared: <strong>{round.tiedOptions.join(', ')}</strong>
+                  </p>
+                )}
               </div>
-
-              <div className="round-tallies">
-                {Object.entries(round.tallies)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([option, votes]) => {
-                    const percentage = round.activeBallotCount > 0
-                      ? (votes / round.activeBallotCount) * 100
-                      : 0
-                    const isWinner = round.winner === option
-                    const isEliminated = round.eliminated === option
-
-                    return (
-                      <div key={option} className="tally-bar">
-                        <span
-                          className="tally-name"
-                          style={{
-                            textDecoration: isEliminated ? 'line-through' : 'none',
-                            color: isEliminated ? 'var(--muted)' : 'inherit',
-                          }}
-                        >
-                          {option}
-                        </span>
-                        <div
-                          className="tally-bar-fill"
-                          style={{
-                            width: `${(votes / maxVotes) * 150}px`,
-                            background: isWinner
-                              ? 'var(--success)'
-                              : isEliminated
-                              ? '#dc354555'
-                              : 'var(--accent)',
-                          }}
-                        />
-                        <span className="tally-count">
-                          {votes} ({percentage.toFixed(1)}%)
-                        </span>
-                        {isWinner && <span className="winner-badge">Winner</span>}
-                      </div>
-                    )
-                  })}
-              </div>
-
-              {round.eliminated && (
-                <p className="eliminated">
-                  Eliminated: <strong>{round.eliminated}</strong>
-                </p>
-              )}
-
-              {round.isTie && round.tiedOptions && (
-                <p style={{ color: '#856404' }}>
-                  Tie declared: <strong>{round.tiedOptions.join(', ')}</strong>
-                </p>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

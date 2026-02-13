@@ -39,6 +39,7 @@ describe('IRV Algorithm', () => {
       expect(result.isTie).toBe(false)
       expect(result.rounds.length).toBe(2)
       expect(result.rounds[0].eliminated).toBe('C')
+      expect(result.rounds[0].eliminationCause?.type).toBe('fewest_votes')
       expect(result.rounds[1].winner).toBe('B')
     })
 
@@ -120,6 +121,7 @@ describe('IRV Algorithm', () => {
       // Round 1 tallies: A=2, B=2, C=1, D=1
       // C and D tie on first-choice votes; weighted ranking support eliminates C first.
       expect(result.rounds[0].eliminated).toBe('C')
+      expect(result.rounds[0].eliminationCause?.type).toBe('weighted_support')
     })
     it('should break tie using first-round totals', () => {
       const options = ['A', 'B', 'C']
@@ -164,6 +166,7 @@ describe('IRV Algorithm', () => {
       const result = countIRV(options, ballots)
       expect(result.isTie).toBe(false)
       expect(result.rounds[0].eliminated).toBe('A')
+      expect(result.rounds[0].eliminationCause?.type).toBe('lexicographic')
       expect(result.rounds[1].eliminated).toBe('B')
       expect(result.winner).toBe('C')
     })

@@ -316,6 +316,7 @@ All meaningful behavior changes must be logged here.
 - 2026-02-13 — Updated tie-breaker runoffs to close-and-trigger when requested, use `-runoff-1` IDs, and expose copyable vote admin secrets in system admin - See DR-2026-02-13-01
 - 2026-02-13 — Updated IRV to never end in a non-empty-ballot tie: full-round ties now eliminate one option deterministically using weighted support, first-round totals, then lexicographic fallback - See DR-2026-02-13-03
 - 2026-02-13 — Removed manual tie-breaker runoff trigger UI/API paths after deterministic full-round tie elimination made explicit runoff triggering unnecessary - See DR-2026-02-13-04
+- 2026-02-13 — Added per-round elimination cause explanations in results UI/API so tie-break eliminations clearly state whether weighted support, first-round totals, or lexicographic fallback decided the round - See DR-2026-02-13-05
 
 ---
 
