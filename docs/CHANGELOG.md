@@ -9,6 +9,7 @@ This document tracks work history, including what was implemented by AI agents a
 ## [Unreleased]
 
 ### Added
+- **Recurring Series Admin Controls** - Vote admin pages now list all vote instances in the same recurrence group, allow deleting specific recurring vote instances, and allow stopping the recurring schedule to prevent new automatic instances.
 - **Elimination Cause Explanations** - Results now explain why each option was eliminated, including when weighted support, first-round totals, or lexicographic tie-breakers decided the round.
 - **System Admin Vote Access** - System admin vote cards now include a direct link to each vote's admin panel.
 - **System Admin Vote Secret Visibility** - Live vote cards in `/system` now include a copyable vote admin secret field for votes created after secret retention was added.
@@ -372,4 +373,3 @@ This project uses semantic versioning:
 - **Human**: David (project owner, planning, decisions)
 - **AI Agent**: Initial MVP implementation (Phases 1-3)
 - **AI Agent**: Repository cleanup and CI/CD setup (current)
-
