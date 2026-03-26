@@ -28,6 +28,19 @@ interface LiveVoteSummary {
   recurrence_active: boolean
 }
 
+interface RecurringVoteSummary {
+  id: string
+  title: string
+  created_at: string
+  closed_at: string | null
+  auto_close_at: string | null
+  recurrence_group_id: string
+  recurrence_active: boolean
+  period_days: number | null
+  vote_duration_hours: number | null
+  integration_id: number | null
+}
+
 const WEBHOOK_STORAGE_KEY = 'rcv-discord-webhook-url'
 const NAME_STORAGE_KEY = 'rcv-discord-integration-name'
 const LIVE_VOTES_PAGE_SIZE = 10
@@ -57,6 +70,9 @@ export default function SystemAdminPage() {
   const [liveVotesPage, setLiveVotesPage] = useState(1)
   const [liveVotesTotalPages, setLiveVotesTotalPages] = useState(1)
   const [liveVotesTotal, setLiveVotesTotal] = useState(0)
+  const [recurringVotes, setRecurringVotes] = useState<RecurringVoteSummary[]>([])
+  const [recurringVotesLoading, setRecurringVotesLoading] = useState(false)
+  const [recurringVotesError, setRecurringVotesError] = useState('')
 
   useEffect(() => {
     try {
@@ -155,6 +171,38 @@ export default function SystemAdminPage() {
     }
   }
 
+  const loadRecurringVotes = async () => {
+    if (!integrationAdminSecret.trim()) {
+      setRecurringVotesError('Admin API secret is required to load recurring votes.')
+      return
+    }
+
+    setRecurringVotesError('')
+    setRecurringVotesLoading(true)
+
+    try {
+      const res = await fetch(withBasePath('/api/admin/recurrence'), {
+        headers: {
+          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
+        },
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setRecurringVotesError(data.error || 'Failed to load recurring votes')
+        setRecurringVotesLoading(false)
+        return
+      }
+
+      const loadedVotes = Array.isArray(data.votes) ? data.votes : []
+      setRecurringVotes(loadedVotes)
+    } catch (err) {
+      setRecurringVotesError('Network error while loading recurring votes.')
+    } finally {
+      setRecurringVotesLoading(false)
+    }
+  }
+
   const validateAdminSecret = async () => {
     if (!integrationAdminSecret.trim()) {
       setAdminSecretValidationError('Admin API secret is required.')
@@ -193,6 +241,7 @@ export default function SystemAdminPage() {
         setIntegrationsError('')
       }
       await loadLiveVotes(1)
+      await loadRecurringVotes()
     } catch (err) {
       setAdminSecretValidationError('Network error while validating admin secret.')
     } finally {
@@ -381,6 +430,7 @@ export default function SystemAdminPage() {
       }
 
       await loadLiveVotes(liveVotesPage)
+      await loadRecurringVotes()
     } catch (err) {
       setLiveVotesError(`Network error while attempting to ${action} vote.`)
     } finally {
@@ -419,10 +469,50 @@ export default function SystemAdminPage() {
       const nextPage = liveVotes.length === 1 && liveVotesPage > 1 ? liveVotesPage - 1 : liveVotesPage
       setLiveVotesPage(nextPage)
       await loadLiveVotes(nextPage)
+      await loadRecurringVotes()
     } catch (err) {
       setLiveVotesError('Network error while deleting vote.')
     } finally {
       setLiveVotesLoading(false)
+    }
+  }
+
+  const stopRecurringGroup = async (recurrenceGroupId: string) => {
+    if (!adminSecretValidated) {
+      setRecurringVotesError('Admin secret validation is required.')
+      return
+    }
+
+    const confirmed = window.confirm('Stop this recurring series? No new vote instances will be created.')
+    if (!confirmed) {
+      return
+    }
+
+    setRecurringVotesError('')
+    setRecurringVotesLoading(true)
+
+    try {
+      const res = await fetch(withBasePath(`/api/admin/recurrence/${recurrenceGroupId}`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${integrationAdminSecret.trim()}`,
+        },
+        body: JSON.stringify({ action: 'stop' }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setRecurringVotesError(data.error || 'Failed to stop recurring series')
+        setRecurringVotesLoading(false)
+        return
+      }
+
+      await loadLiveVotes(liveVotesPage)
+      await loadRecurringVotes()
+    } catch (err) {
+      setRecurringVotesError('Network error while stopping recurring series.')
+    } finally {
+      setRecurringVotesLoading(false)
     }
   }
 
@@ -447,6 +537,15 @@ export default function SystemAdminPage() {
     }
     return `/?${params.toString()}`
   }
+
+  const recurringVotesByGroup = recurringVotes.reduce<Record<string, RecurringVoteSummary[]>>((groups, vote) => {
+    if (!groups[vote.recurrence_group_id]) {
+      groups[vote.recurrence_group_id] = []
+    }
+    groups[vote.recurrence_group_id].push(vote)
+    return groups
+  }, {})
+  const recurringGroupEntries = Object.entries(recurringVotesByGroup)
 
   return (
     <div className="fade-in">
@@ -477,6 +576,8 @@ export default function SystemAdminPage() {
               setLiveVotesPage(1)
               setLiveVotesTotalPages(1)
               setLiveVotesTotal(0)
+              setRecurringVotes([])
+              setRecurringVotesError('')
             }}
             placeholder="Enter ADMIN_SECRET"
             className="input-large"
@@ -513,6 +614,14 @@ export default function SystemAdminPage() {
                 disabled={liveVotesLoading}
               >
                 {liveVotesLoading ? 'Loading...' : 'Refresh votes'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={loadRecurringVotes}
+                disabled={recurringVotesLoading}
+              >
+                {recurringVotesLoading ? 'Loading recurring...' : 'Refresh recurring'}
               </button>
               <p className="muted" style={{ margin: 0 }}>
                 Showing {liveVotes.length} of {liveVotesTotal} vote{liveVotesTotal === 1 ? '' : 's'}.
@@ -630,6 +739,73 @@ export default function SystemAdminPage() {
                     Next
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <h2>Recurring Vote Series</h2>
+            <p className="muted" style={{ marginBottom: '0.75rem' }}>
+              Manage all recurring vote groups across the system, including series where the vote admin secret is unavailable.
+            </p>
+            {recurringVotesError && <p className="error" style={{ marginBottom: '0.75rem' }}>{recurringVotesError}</p>}
+            {recurringGroupEntries.length === 0 && !recurringVotesError && (
+              <p className="muted">No recurring vote series found.</p>
+            )}
+            {recurringGroupEntries.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {recurringGroupEntries.map(([recurrenceGroupId, groupVotes]) => {
+                  const hasActiveVote = groupVotes.some((vote) => vote.recurrence_active)
+                  return (
+                    <div key={recurrenceGroupId} className="card" style={{ padding: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                        <div>
+                          <h3 style={{ marginBottom: '0.25rem' }}>{recurrenceGroupId}</h3>
+                          <p className="muted" style={{ margin: 0 }}>
+                            {groupVotes.length} vote instance{groupVotes.length === 1 ? '' : 's'} • Recurrence {hasActiveVote ? 'active' : 'stopped'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => stopRecurringGroup(recurrenceGroupId)}
+                          disabled={recurringVotesLoading || !hasActiveVote}
+                        >
+                          Stop recurring series
+                        </button>
+                      </div>
+                      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {groupVotes.map((vote) => (
+                          <div
+                            key={vote.id}
+                            style={{ border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.75rem' }}
+                          >
+                            <p className="muted" style={{ margin: 0 }}>
+                              <strong>{vote.id}</strong> • {vote.closed_at ? 'Closed' : 'Open'}
+                              {vote.auto_close_at && ` • Auto-close ${new Date(vote.auto_close_at).toLocaleString()}`}
+                            </p>
+                            <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                              Created: {new Date(vote.created_at).toLocaleString()}
+                            </p>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                              <Link className="btn-secondary" href={`/v/${vote.id}/admin`}>
+                                Open vote admin
+                              </Link>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => deleteLiveVote(vote.id)}
+                                disabled={liveVotesLoading || recurringVotesLoading}
+                              >
+                                Delete vote
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

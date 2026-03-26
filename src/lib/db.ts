@@ -253,6 +253,19 @@ export interface LiveVoteSummary {
   recurrence_active: boolean
 }
 
+export interface RecurringVoteAdminSummary {
+  id: string
+  title: string
+  created_at: string
+  closed_at: string | null
+  auto_close_at: string | null
+  recurrence_group_id: string
+  recurrence_active: boolean
+  period_days: number | null
+  vote_duration_hours: number | null
+  integration_id: number | null
+}
+
 export interface Ballot {
   id: number
   vote_id: string
@@ -421,6 +434,31 @@ export function getLiveVotesPaginated(limit: number, offset: number): { votes: L
   }))
 
   return { votes, total }
+}
+
+export function getAllRecurringVotesForAdmin(): RecurringVoteAdminSummary[] {
+  const stmt = db.prepare(`
+    SELECT
+      id,
+      title,
+      created_at,
+      closed_at,
+      auto_close_at,
+      recurrence_group_id,
+      recurrence_active,
+      period_days,
+      vote_duration_hours,
+      integration_id
+    FROM votes
+    WHERE recurrence_group_id IS NOT NULL
+    ORDER BY created_at DESC
+  `)
+
+  const rows = stmt.all() as any[]
+  return rows.map((row) => ({
+    ...row,
+    recurrence_active: Boolean(row.recurrence_active),
+  }))
 }
 
 // Ballot operations

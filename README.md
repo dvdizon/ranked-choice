@@ -148,6 +148,8 @@ You'll receive three URLs:
    - Review a paginated list of open and closed votes
    - Close/reopen voting, delete votes, or re-create votes with pre-filled fields
    - Open any vote's admin panel directly from the system admin vote list
+   - Review all recurring vote series grouped by recurrence ID
+   - Stop a recurring series or delete any recurring vote instance without needing per-vote admin secrets
 4. Manage integrations:
    - Create a new Discord integration (webhook URL required)
    - Load and delete existing integrations
@@ -286,6 +288,7 @@ See `.github/workflows/ci.yml` for full configuration details.
 - **URL Secret Support**: Voting secret can be passed via `?secret=` URL parameter for easy sharing
 - **Admin Panel**: Full vote management (delete, close/reopen, edit options, set auto-close, rename contest ID)
 - **System Admin Secret Recovery**: System admin live-vote cards show a copyable vote admin secret when available
+- **System Admin Recurring Management**: System admin can inspect all recurring series, stop recurrence, and delete rogue recurring instances
 - **REST API**: Full programmatic access for automated vote creation (see [docs/API.md](docs/API.md))
 - **Vote IDs**: Support dashes for readable URLs plus recurring ID format tokens (e.g., `/v/friday-lunch-02-13-2026`)
 
@@ -302,7 +305,9 @@ src/
 │   │   └── admin/         # Admin panel
 │   └── api/               # API routes
 │       ├── admin/
-│       │   └── api-keys/route.ts # API key management (admin only)
+│       │   ├── api-keys/route.ts # API key management (admin only)
+│       │   ├── votes/route.ts    # System admin vote list
+│       │   └── recurrence/       # System admin recurring-series controls
 │       └── votes/         # Vote/ballot endpoints
 │           ├── route.ts                    # Create vote
 │           └── [voteId]/

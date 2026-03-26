@@ -318,6 +318,7 @@ All meaningful behavior changes must be logged here.
 - 2026-02-13 — Removed manual tie-breaker runoff trigger UI/API paths after deterministic full-round tie elimination made explicit runoff triggering unnecessary - See DR-2026-02-13-04
 - 2026-02-13 — Added per-round elimination cause explanations in results UI/API so tie-break eliminations clearly state whether weighted support, first-round totals, or lexicographic fallback decided the round - See DR-2026-02-13-05
 - 2026-03-25 — Added recurring-series management in vote admin (list/delete recurring vote instances and stop recurrence) - See DR-2026-03-25-01
+- 2026-03-26 — Added system-admin recurring-series management in `/system` (list all recurring groups, stop recurrence, delete rogue instances) - See DR-2026-03-26-01
 
 ---
 

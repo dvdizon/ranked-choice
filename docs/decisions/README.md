@@ -5,6 +5,7 @@ Each record captures a product or architecture decision that affects behavior, U
 
 ## Index
 
+- **DR-2026-03-26-01** — System Admin Recurring-Series Management (`DR-2026-03-26-01.md`)
 - **DR-2026-03-25-01** — Vote Admin Recurring Series Management (`DR-2026-03-25-01.md`)
 - **DR-2026-02-13-05** — Explain Elimination Cause in Results (`DR-2026-02-13-05.md`)
 - **DR-2026-02-13-01** — Manual Tie-Breaker Trigger + Runoff ID Suffix + System Admin Vote Reopen Controls + Secret Visibility (`DR-2026-02-13-01.md`)

@@ -48,7 +48,9 @@ src/
 │   │   └── admin/         # Admin panel
 │   └── api/               # REST API endpoints
 │       ├── admin/
-│       │   └── api-keys/route.ts  # API key management (admin only)
+│       │   ├── api-keys/route.ts  # API key management (admin only)
+│       │   ├── votes/route.ts     # System admin vote listing/management
+│       │   └── recurrence/route.ts # System admin recurring vote listing/stop controls
 │       └── votes/
 │           ├── route.ts       # Create vote
 │           └── [voteId]/
@@ -159,6 +161,7 @@ When creating a new release:
 - Vote CRUD: `createVote`, `getVote`, `deleteVote`, `voteExists`
 - Vote management: `closeVote`, `reopenVote`, `updateVoteOptions`, `appendVoteOptions`, `setAutoCloseAt`, `setVoteRecurrence`
 - Recurring votes: `createNextRecurringVote`, `getLatestVoteInRecurrenceGroup`, `getRecurringVotesNeedingNewInstance`, `stopRecurringVoteGroup`, `countActiveRecurringVoteGroups`, `getVotesInRecurrenceGroup`, `updateRecurringVoteTemplate`
+- System admin recurring helpers: `getAllRecurringVotesForAdmin`
 - Ballot operations: `createBallot`, `getBallot`, `getBallotsByVoteId`, `deleteBallot`, `countBallots`
 - API key operations: `createApiKey`, `getApiKeyById`, `getApiKeyByHash`, `getAllApiKeys`, `updateApiKeyLastUsed`, `deleteApiKey`
 - Integration operations: `createIntegration`, `getIntegrationById`, `getAllIntegrations`, `updateIntegration`, `deleteIntegration`
@@ -168,6 +171,7 @@ When creating a new release:
 - REST endpoints under `/api/votes/` - See `docs/API.md` for comprehensive API documentation
   - Includes `/api/votes/:voteId/recurrence` for recurring-group admin management via vote admin secret
 - Admin endpoints under `/api/admin/` - Requires `ADMIN_SECRET` environment variable
+  - Includes `/api/admin/recurrence` for system-wide recurring vote management
 - Integrations endpoints under `/api/integrations/` - Requires `ADMIN_SECRET` authentication
 - Health check endpoint at `/api/health` - Returns `{"status": "ok"}` for deployment verification
 - JSON request/response bodies
@@ -279,6 +283,7 @@ location /health {
   - Edit vote options (removes deleted options from existing ballots)
 - **System Admin** (`/system`): ADMIN_SECRET protected management
   - Monitor open/closed votes, close/reopen/delete them, open vote admin pages, and re-create votes with prefilled fields
+  - List all recurring vote groups/instances, stop recurring schedules, and delete rogue recurring votes
   - Copy vote admin secrets for eligible votes when handing off admin access
   - Manage integrations (Discord, Slack, webhook)
 - **API Key Management** (`/api/admin/api-keys`): Admin-secret protected endpoints
