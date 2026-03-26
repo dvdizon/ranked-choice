@@ -13,6 +13,7 @@ This document tracks work history, including what was implemented by AI agents a
 - **Elimination Cause Explanations** - Results now explain why each option was eliminated, including when weighted support, first-round totals, or lexicographic tie-breakers decided the round.
 - **System Admin Vote Access** - System admin vote cards now include a direct link to each vote's admin panel.
 - **System Admin Vote Secret Visibility** - Live vote cards in `/system` now include a copyable vote admin secret field for votes created after secret retention was added.
+- **System Admin Recurring Series Management** - `/system` now includes a recurring-series section that lists all recurring vote instances by group, supports stopping a series, and allows deleting rogue recurring instances without per-vote admin secrets.
 - **Recurring Contest ID Format + Rename** - Recurring votes can now generate readable date-based IDs (default `{title}-{close-mm-dd-yyyy}`), and admins can rename contest IDs from the admin panel/API.
 - **Contest ID Visibility** - Vote and results pages now show the contest ID under the title so closed or shared contests are easier to identify.
 - **Mobile Drag Handle UX** - Ranking rows now use a dedicated ☰ drag handle to reduce accidental reordering while scrolling on touch devices.

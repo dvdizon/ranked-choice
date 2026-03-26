@@ -654,6 +654,72 @@ Authorization: Bearer <ADMIN_SECRET>
 
 ---
 
+### List Recurring Votes (System Admin)
+
+**GET** `/api/admin/recurrence`
+
+List all recurring vote instances across all recurrence groups.
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "votes": [
+    {
+      "id": "team-lunch-02-20-2026",
+      "title": "Friday Lunch",
+      "created_at": "2026-02-13T17:00:00Z",
+      "closed_at": null,
+      "auto_close_at": "2026-02-20T17:00:00Z",
+      "recurrence_group_id": "team-lunch-weekly",
+      "recurrence_active": true,
+      "period_days": 7,
+      "vote_duration_hours": 24,
+      "integration_id": 1
+    }
+  ]
+}
+```
+
+---
+
+### Stop Recurring Series (System Admin)
+
+**PATCH** `/api/admin/recurrence/:recurrenceGroupId`
+
+Stop a recurring series so no new vote instances are auto-created.
+
+**Headers:**
+
+```
+Authorization: Bearer <ADMIN_SECRET>
+```
+
+**Request Body:**
+
+```json
+{
+  "action": "stop"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
 ## Integrations Endpoints
 
 These endpoints require the `ADMIN_SECRET` environment variable to be set and provided in the Authorization header.
