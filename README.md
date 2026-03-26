@@ -132,6 +132,8 @@ You'll receive three URLs:
 3. Available actions:
    - View all ballots with voter names (or "Anonymous") and timestamps
    - Delete individual ballots (e.g., duplicates or test submissions)
+   - View and delete recurring vote instances tied to the same recurrence group
+   - Stop an active recurring series to prevent new vote instances from being created
    - Delete the entire vote permanently
    - Close voting (prevents new ballot submissions)
    - Reopen voting (allows new submissions again)

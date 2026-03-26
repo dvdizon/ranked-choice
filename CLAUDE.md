@@ -56,6 +56,7 @@ src/
 │               ├── ballots/   # Submit/view ballots
 │               │   ├── route.ts
 │               │   └── [ballotId]/route.ts  # Delete ballot
+│               ├── recurrence/route.ts  # List/stop recurring vote groups for admin panel
 │               └── results/route.ts
 └── lib/
     ├── db.ts              # SQLite database layer
@@ -165,6 +166,7 @@ When creating a new release:
 
 ### API Routes
 - REST endpoints under `/api/votes/` - See `docs/API.md` for comprehensive API documentation
+  - Includes `/api/votes/:voteId/recurrence` for recurring-group admin management via vote admin secret
 - Admin endpoints under `/api/admin/` - Requires `ADMIN_SECRET` environment variable
 - Integrations endpoints under `/api/integrations/` - Requires `ADMIN_SECRET` authentication
 - Health check endpoint at `/api/health` - Returns `{"status": "ok"}` for deployment verification
@@ -271,6 +273,7 @@ location /health {
 - **Admin Panel** (`/v/:voteId/admin`): Admin-secret protected management interface
   - View all ballots with voter names and timestamps
   - Delete individual ballots or entire vote
+  - Manage recurring vote groups (list/delete instances and stop recurrence)
   - Close/reopen voting (prevents new submissions when closed)
   - Set or change auto-close date/time
   - Edit vote options (removes deleted options from existing ballots)

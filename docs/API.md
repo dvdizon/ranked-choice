@@ -392,6 +392,65 @@ Delete a specific ballot (requires write secret).
 
 ---
 
+### Get Recurring Vote Group (Admin)
+
+**GET** `/api/votes/:voteId/recurrence`
+
+List all vote instances in the same recurrence group (requires write secret in header).
+
+**Headers:**
+
+```
+X-Write-Secret: xYz123AbC
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "recurrenceGroupId": "team-lunch-weekly",
+  "recurrenceActive": true,
+  "votes": [
+    {
+      "id": "team-lunch-03-25-2026",
+      "title": "Team Lunch Decision",
+      "created_at": "2026-03-25T12:00:00Z",
+      "closed_at": null,
+      "auto_close_at": "2026-03-25T18:00:00Z",
+      "ballotCount": 4
+    }
+  ]
+}
+```
+
+---
+
+### Stop Recurring Vote Group (Admin)
+
+**PATCH** `/api/votes/:voteId/recurrence`
+
+Stop the recurring schedule for the current recurrence group (requires write secret).
+
+**Request Body:**
+
+```json
+{
+  "writeSecret": "xYz123AbC",
+  "action": "stopRecurring"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
 ## Admin Endpoints
 
 These endpoints require the `ADMIN_SECRET` environment variable to be set and provided in the Authorization header.

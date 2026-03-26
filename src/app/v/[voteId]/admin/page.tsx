@@ -12,6 +12,8 @@ interface Vote {
   closed_at: string | null
   auto_close_at: string | null
   ballotCount: number
+  recurrence_group_id?: string | null
+  recurrence_active?: boolean
 }
 
 interface Ballot {
@@ -19,6 +21,15 @@ interface Ballot {
   rankings: string[]
   voter_name: string
   created_at: string
+}
+
+interface RecurringVoteSummary {
+  id: string
+  title: string
+  created_at: string
+  closed_at: string | null
+  auto_close_at: string | null
+  ballotCount: number
 }
 
 export default function AdminPage() {
@@ -38,8 +49,37 @@ export default function AdminPage() {
   const [autoCloseAt, setAutoCloseAt] = useState('')
   const [editingVoteId, setEditingVoteId] = useState(false)
   const [nextVoteId, setNextVoteId] = useState('')
+  const [recurrenceGroupId, setRecurrenceGroupId] = useState<string | null>(null)
+  const [recurrenceActive, setRecurrenceActive] = useState(false)
+  const [recurringVotes, setRecurringVotes] = useState<RecurringVoteSummary[]>([])
+  const [loadingRecurring, setLoadingRecurring] = useState(false)
 
   const activeVoteId = vote?.id ?? routeVoteId
+
+  const loadRecurringVotes = async (voteId: string) => {
+    try {
+      setLoadingRecurring(true)
+      const recurringRes = await fetch(withBasePath(`/api/votes/${voteId}/recurrence`), {
+        headers: {
+          'X-Write-Secret': writeSecret,
+        },
+      })
+
+      if (!recurringRes.ok) {
+        setRecurrenceGroupId(null)
+        setRecurrenceActive(false)
+        setRecurringVotes([])
+        return
+      }
+
+      const recurringData = await recurringRes.json()
+      setRecurrenceGroupId(recurringData.recurrenceGroupId ?? null)
+      setRecurrenceActive(Boolean(recurringData.recurrenceActive))
+      setRecurringVotes(recurringData.votes ?? [])
+    } finally {
+      setLoadingRecurring(false)
+    }
+  }
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +113,7 @@ export default function AdminPage() {
 
       const ballotsData = await ballotsRes.json()
       setBallots(ballotsData.ballots)
+      await loadRecurringVotes(activeVoteId)
       setAuthenticated(true)
     } catch (err) {
       setError('Network error')
@@ -138,6 +179,72 @@ export default function AdminPage() {
       }
     } catch (err) {
       setError('Network error')
+    }
+  }
+
+  const handleDeleteRecurringVote = async (recurringVoteId: string) => {
+    if (!confirm(`Delete recurring vote "${recurringVoteId}" and all ballots? This cannot be undone.`)) {
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch(withBasePath(`/api/votes/${recurringVoteId}`), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ writeSecret }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || 'Failed to delete recurring vote')
+        setLoading(false)
+        return
+      }
+
+      if (recurringVoteId === activeVoteId) {
+        alert('Vote deleted successfully')
+        router.push('/')
+        return
+      }
+
+      await loadRecurringVotes(activeVoteId)
+    } catch (err) {
+      setError('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStopRecurring = async () => {
+    if (!confirm('Stop this recurring series? No new vote instances will be created.')) {
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(withBasePath(`/api/votes/${activeVoteId}/recurrence`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ writeSecret, action: 'stopRecurring' }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || 'Failed to stop recurrence')
+        setLoading(false)
+        return
+      }
+
+      setRecurrenceActive(false)
+      await loadRecurringVotes(activeVoteId)
+    } catch (err) {
+      setError('Network error')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -590,6 +697,79 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {recurrenceGroupId && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h2>Recurring Votes ({recurringVotes.length})</h2>
+          <p className="muted" style={{ marginBottom: '0.75rem' }}>
+            Recurrence group: <strong>{recurrenceGroupId}</strong>
+          </p>
+          <p style={{ marginBottom: '1rem' }}>
+            <strong>Status:</strong>{' '}
+            <span style={{ color: recurrenceActive ? 'var(--success)' : 'var(--muted)' }}>
+              {recurrenceActive ? 'Active (new votes can be created)' : 'Stopped'}
+            </span>
+          </p>
+          {recurrenceActive && (
+            <button
+              className="btn-secondary"
+              onClick={handleStopRecurring}
+              disabled={loading}
+              style={{ marginBottom: '1rem' }}
+            >
+              Stop Recurring Series
+            </button>
+          )}
+          {loadingRecurring ? (
+            <p className="muted">Loading recurring votes...</p>
+          ) : recurringVotes.length === 0 ? (
+            <p className="muted">No recurring vote instances found.</p>
+          ) : (
+            <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+              {recurringVotes.map((recurringVote) => (
+                <div
+                  key={recurringVote.id}
+                  style={{
+                    borderBottom: '1px solid var(--border)',
+                    padding: '0.75rem 0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '1rem',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <p style={{ marginBottom: '0.25rem' }}>
+                      <strong>{recurringVote.id}</strong>
+                    </p>
+                    <p className="muted" style={{ marginBottom: '0.25rem' }}>
+                      {recurringVote.closed_at ? 'Closed' : 'Open'} • {recurringVote.ballotCount} ballot{recurringVote.ballotCount === 1 ? '' : 's'}
+                    </p>
+                    <p className="muted" style={{ marginBottom: 0 }}>
+                      Created: {new Date(recurringVote.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => router.push(`/v/${recurringVote.id}/admin`)}
+                    >
+                      Open Admin
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => handleDeleteRecurringVote(recurringVote.id)}
+                      disabled={loading}
+                    >
+                      Delete Vote
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {error && <p className="error" style={{ marginBottom: '1rem' }}>{error}</p>}
 
