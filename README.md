@@ -99,6 +99,7 @@ You'll receive three URLs:
 - **Vote page**: Share with voters (includes voting secret in URL)
 - **Results page**: View live results
 - **Admin panel**: Manage the vote (requires admin secret)
+  - Destructive delete actions use a two-tap confirmation in-page (mobile-friendly, no native confirm dialog required)
 
 ### Submitting a Ballot
 

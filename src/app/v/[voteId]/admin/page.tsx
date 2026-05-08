@@ -53,6 +53,8 @@ export default function AdminPage() {
   const [recurrenceActive, setRecurrenceActive] = useState(false)
   const [recurringVotes, setRecurringVotes] = useState<RecurringVoteSummary[]>([])
   const [loadingRecurring, setLoadingRecurring] = useState(false)
+  const [confirmVoteDelete, setConfirmVoteDelete] = useState(false)
+  const [confirmBallotDeleteId, setConfirmBallotDeleteId] = useState<number | null>(null)
 
   const activeVoteId = vote?.id ?? routeVoteId
 
@@ -123,10 +125,6 @@ export default function AdminPage() {
   }
 
   const handleDeleteVote = async () => {
-    if (!confirm('Are you sure you want to delete this vote and all its ballots? This cannot be undone.')) {
-      return
-    }
-
     setLoading(true)
     setError('')
 
@@ -153,10 +151,6 @@ export default function AdminPage() {
   }
 
   const handleDeleteBallot = async (ballotId: number) => {
-    if (!confirm('Are you sure you want to delete this ballot?')) {
-      return
-    }
-
     try {
       const res = await fetch(withBasePath(`/api/votes/${activeVoteId}/ballots/${ballotId}`), {
         method: 'DELETE',
@@ -172,6 +166,7 @@ export default function AdminPage() {
 
       // Remove ballot from list
       setBallots(ballots.filter((b) => b.id !== ballotId))
+      setConfirmBallotDeleteId(null)
 
       // Update vote ballot count
       if (vote) {
@@ -685,13 +680,24 @@ export default function AdminPage() {
                     ))}
                   </ol>
                 </div>
-                <button
-                  className="btn-secondary"
-                  onClick={() => handleDeleteBallot(ballot.id)}
-                  style={{ marginLeft: '1rem' }}
-                >
-                  Delete
-                </button>
+                {confirmBallotDeleteId === ballot.id ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBallot(ballot.id)}
+                    style={{ marginLeft: '1rem', background: 'var(--danger)' }}
+                  >
+                    Confirm delete
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setConfirmBallotDeleteId(ballot.id)}
+                    style={{ marginLeft: '1rem' }}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -777,14 +783,27 @@ export default function AdminPage() {
         <h2 style={{ color: 'var(--error)' }}>Danger Zone</h2>
         <p style={{ marginBottom: '1rem' }}>
           Deleting this vote will permanently remove it and all its ballots. This action cannot be undone.
+          Tap delete again to confirm.
         </p>
-        <button
-          onClick={handleDeleteVote}
-          disabled={loading}
-          style={{ backgroundColor: 'var(--error)' }}
-        >
-          Delete Vote Permanently
-        </button>
+        {confirmVoteDelete ? (
+          <button
+            type="button"
+            onClick={handleDeleteVote}
+            disabled={loading}
+            style={{ backgroundColor: 'var(--error)' }}
+          >
+            {loading ? 'Deleting...' : 'Confirm Delete Vote'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmVoteDelete(true)}
+            disabled={loading}
+            style={{ backgroundColor: 'var(--error)' }}
+          >
+            Delete Vote Permanently
+          </button>
+        )}
       </div>
     </div>
   )
