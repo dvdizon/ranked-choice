@@ -29,6 +29,7 @@ This document tracks work history, including what was implemented by AI agents a
 - **Manual Tie-Breaker Trigger UI/API Paths** - Removed runoff-trigger actions from vote admin, system admin, and PATCH vote admin APIs.
 
 ### Fixed
+- **Admin Delete Actions on Mobile** - Vote admin now uses in-page two-tap confirmation for deleting ballots/votes instead of relying on native browser confirm dialogs, improving reliability on mobile webviews.
 - **Recurring Notification Timing** - Close notifications are now sent when votes actually close (manual or auto-close) instead of being delayed until the next recurring instance.
 - **Late Open Alerts** - Scheduler now closes expired votes before open-notification checks to prevent false "vote opened" notifications after a vote should already be closed.
 
